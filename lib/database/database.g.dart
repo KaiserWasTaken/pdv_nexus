@@ -1161,12 +1161,415 @@ class DailyReportsCompanion extends UpdateCompanion<DailyReport> {
   }
 }
 
+class $OrderItemsTable extends OrderItems
+    with TableInfo<$OrderItemsTable, OrderItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OrderItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _productNameMeta = const VerificationMeta(
+    'productName',
+  );
+  @override
+  late final GeneratedColumn<String> productName = GeneratedColumn<String>(
+    'product_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _priceAtSaleMeta = const VerificationMeta(
+    'priceAtSale',
+  );
+  @override
+  late final GeneratedColumn<double> priceAtSale = GeneratedColumn<double>(
+    'price_at_sale',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pendiente'),
+  );
+  static const VerificationMeta _orderDateMeta = const VerificationMeta(
+    'orderDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> orderDate = GeneratedColumn<DateTime>(
+    'order_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDate,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    productName,
+    priceAtSale,
+    quantity,
+    status,
+    orderDate,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'order_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<OrderItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('product_name')) {
+      context.handle(
+        _productNameMeta,
+        productName.isAcceptableOrUnknown(
+          data['product_name']!,
+          _productNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_productNameMeta);
+    }
+    if (data.containsKey('price_at_sale')) {
+      context.handle(
+        _priceAtSaleMeta,
+        priceAtSale.isAcceptableOrUnknown(
+          data['price_at_sale']!,
+          _priceAtSaleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_priceAtSaleMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('order_date')) {
+      context.handle(
+        _orderDateMeta,
+        orderDate.isAcceptableOrUnknown(data['order_date']!, _orderDateMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  OrderItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OrderItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      productName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_name'],
+      )!,
+      priceAtSale: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price_at_sale'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      orderDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}order_date'],
+      )!,
+    );
+  }
+
+  @override
+  $OrderItemsTable createAlias(String alias) {
+    return $OrderItemsTable(attachedDatabase, alias);
+  }
+}
+
+class OrderItem extends DataClass implements Insertable<OrderItem> {
+  final int id;
+  final String productName;
+  final double priceAtSale;
+  final int quantity;
+  final String status;
+  final DateTime orderDate;
+  const OrderItem({
+    required this.id,
+    required this.productName,
+    required this.priceAtSale,
+    required this.quantity,
+    required this.status,
+    required this.orderDate,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['product_name'] = Variable<String>(productName);
+    map['price_at_sale'] = Variable<double>(priceAtSale);
+    map['quantity'] = Variable<int>(quantity);
+    map['status'] = Variable<String>(status);
+    map['order_date'] = Variable<DateTime>(orderDate);
+    return map;
+  }
+
+  OrderItemsCompanion toCompanion(bool nullToAbsent) {
+    return OrderItemsCompanion(
+      id: Value(id),
+      productName: Value(productName),
+      priceAtSale: Value(priceAtSale),
+      quantity: Value(quantity),
+      status: Value(status),
+      orderDate: Value(orderDate),
+    );
+  }
+
+  factory OrderItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OrderItem(
+      id: serializer.fromJson<int>(json['id']),
+      productName: serializer.fromJson<String>(json['productName']),
+      priceAtSale: serializer.fromJson<double>(json['priceAtSale']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      status: serializer.fromJson<String>(json['status']),
+      orderDate: serializer.fromJson<DateTime>(json['orderDate']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'productName': serializer.toJson<String>(productName),
+      'priceAtSale': serializer.toJson<double>(priceAtSale),
+      'quantity': serializer.toJson<int>(quantity),
+      'status': serializer.toJson<String>(status),
+      'orderDate': serializer.toJson<DateTime>(orderDate),
+    };
+  }
+
+  OrderItem copyWith({
+    int? id,
+    String? productName,
+    double? priceAtSale,
+    int? quantity,
+    String? status,
+    DateTime? orderDate,
+  }) => OrderItem(
+    id: id ?? this.id,
+    productName: productName ?? this.productName,
+    priceAtSale: priceAtSale ?? this.priceAtSale,
+    quantity: quantity ?? this.quantity,
+    status: status ?? this.status,
+    orderDate: orderDate ?? this.orderDate,
+  );
+  OrderItem copyWithCompanion(OrderItemsCompanion data) {
+    return OrderItem(
+      id: data.id.present ? data.id.value : this.id,
+      productName: data.productName.present
+          ? data.productName.value
+          : this.productName,
+      priceAtSale: data.priceAtSale.present
+          ? data.priceAtSale.value
+          : this.priceAtSale,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      status: data.status.present ? data.status.value : this.status,
+      orderDate: data.orderDate.present ? data.orderDate.value : this.orderDate,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OrderItem(')
+          ..write('id: $id, ')
+          ..write('productName: $productName, ')
+          ..write('priceAtSale: $priceAtSale, ')
+          ..write('quantity: $quantity, ')
+          ..write('status: $status, ')
+          ..write('orderDate: $orderDate')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, productName, priceAtSale, quantity, status, orderDate);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OrderItem &&
+          other.id == this.id &&
+          other.productName == this.productName &&
+          other.priceAtSale == this.priceAtSale &&
+          other.quantity == this.quantity &&
+          other.status == this.status &&
+          other.orderDate == this.orderDate);
+}
+
+class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
+  final Value<int> id;
+  final Value<String> productName;
+  final Value<double> priceAtSale;
+  final Value<int> quantity;
+  final Value<String> status;
+  final Value<DateTime> orderDate;
+  const OrderItemsCompanion({
+    this.id = const Value.absent(),
+    this.productName = const Value.absent(),
+    this.priceAtSale = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.status = const Value.absent(),
+    this.orderDate = const Value.absent(),
+  });
+  OrderItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required String productName,
+    required double priceAtSale,
+    this.quantity = const Value.absent(),
+    this.status = const Value.absent(),
+    this.orderDate = const Value.absent(),
+  }) : productName = Value(productName),
+       priceAtSale = Value(priceAtSale);
+  static Insertable<OrderItem> custom({
+    Expression<int>? id,
+    Expression<String>? productName,
+    Expression<double>? priceAtSale,
+    Expression<int>? quantity,
+    Expression<String>? status,
+    Expression<DateTime>? orderDate,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (productName != null) 'product_name': productName,
+      if (priceAtSale != null) 'price_at_sale': priceAtSale,
+      if (quantity != null) 'quantity': quantity,
+      if (status != null) 'status': status,
+      if (orderDate != null) 'order_date': orderDate,
+    });
+  }
+
+  OrderItemsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? productName,
+    Value<double>? priceAtSale,
+    Value<int>? quantity,
+    Value<String>? status,
+    Value<DateTime>? orderDate,
+  }) {
+    return OrderItemsCompanion(
+      id: id ?? this.id,
+      productName: productName ?? this.productName,
+      priceAtSale: priceAtSale ?? this.priceAtSale,
+      quantity: quantity ?? this.quantity,
+      status: status ?? this.status,
+      orderDate: orderDate ?? this.orderDate,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (productName.present) {
+      map['product_name'] = Variable<String>(productName.value);
+    }
+    if (priceAtSale.present) {
+      map['price_at_sale'] = Variable<double>(priceAtSale.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (orderDate.present) {
+      map['order_date'] = Variable<DateTime>(orderDate.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OrderItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('productName: $productName, ')
+          ..write('priceAtSale: $priceAtSale, ')
+          ..write('quantity: $quantity, ')
+          ..write('status: $status, ')
+          ..write('orderDate: $orderDate')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ProductsTable products = $ProductsTable(this);
   late final $RentalsTable rentals = $RentalsTable(this);
   late final $DailyReportsTable dailyReports = $DailyReportsTable(this);
+  late final $OrderItemsTable orderItems = $OrderItemsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1175,6 +1578,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     products,
     rentals,
     dailyReports,
+    orderItems,
   ];
 }
 
@@ -1790,6 +2194,220 @@ typedef $$DailyReportsTableProcessedTableManager =
       DailyReport,
       PrefetchHooks Function()
     >;
+typedef $$OrderItemsTableCreateCompanionBuilder =
+    OrderItemsCompanion Function({
+      Value<int> id,
+      required String productName,
+      required double priceAtSale,
+      Value<int> quantity,
+      Value<String> status,
+      Value<DateTime> orderDate,
+    });
+typedef $$OrderItemsTableUpdateCompanionBuilder =
+    OrderItemsCompanion Function({
+      Value<int> id,
+      Value<String> productName,
+      Value<double> priceAtSale,
+      Value<int> quantity,
+      Value<String> status,
+      Value<DateTime> orderDate,
+    });
+
+class $$OrderItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $OrderItemsTable> {
+  $$OrderItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get productName => $composableBuilder(
+    column: $table.productName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get priceAtSale => $composableBuilder(
+    column: $table.priceAtSale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get orderDate => $composableBuilder(
+    column: $table.orderDate,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OrderItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $OrderItemsTable> {
+  $$OrderItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get productName => $composableBuilder(
+    column: $table.productName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get priceAtSale => $composableBuilder(
+    column: $table.priceAtSale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get orderDate => $composableBuilder(
+    column: $table.orderDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OrderItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OrderItemsTable> {
+  $$OrderItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get productName => $composableBuilder(
+    column: $table.productName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get priceAtSale => $composableBuilder(
+    column: $table.priceAtSale,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get orderDate =>
+      $composableBuilder(column: $table.orderDate, builder: (column) => column);
+}
+
+class $$OrderItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OrderItemsTable,
+          OrderItem,
+          $$OrderItemsTableFilterComposer,
+          $$OrderItemsTableOrderingComposer,
+          $$OrderItemsTableAnnotationComposer,
+          $$OrderItemsTableCreateCompanionBuilder,
+          $$OrderItemsTableUpdateCompanionBuilder,
+          (
+            OrderItem,
+            BaseReferences<_$AppDatabase, $OrderItemsTable, OrderItem>,
+          ),
+          OrderItem,
+          PrefetchHooks Function()
+        > {
+  $$OrderItemsTableTableManager(_$AppDatabase db, $OrderItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OrderItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OrderItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OrderItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> productName = const Value.absent(),
+                Value<double> priceAtSale = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> orderDate = const Value.absent(),
+              }) => OrderItemsCompanion(
+                id: id,
+                productName: productName,
+                priceAtSale: priceAtSale,
+                quantity: quantity,
+                status: status,
+                orderDate: orderDate,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String productName,
+                required double priceAtSale,
+                Value<int> quantity = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> orderDate = const Value.absent(),
+              }) => OrderItemsCompanion.insert(
+                id: id,
+                productName: productName,
+                priceAtSale: priceAtSale,
+                quantity: quantity,
+                status: status,
+                orderDate: orderDate,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OrderItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OrderItemsTable,
+      OrderItem,
+      $$OrderItemsTableFilterComposer,
+      $$OrderItemsTableOrderingComposer,
+      $$OrderItemsTableAnnotationComposer,
+      $$OrderItemsTableCreateCompanionBuilder,
+      $$OrderItemsTableUpdateCompanionBuilder,
+      (OrderItem, BaseReferences<_$AppDatabase, $OrderItemsTable, OrderItem>),
+      OrderItem,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1800,4 +2418,6 @@ class $AppDatabaseManager {
       $$RentalsTableTableManager(_db, _db.rentals);
   $$DailyReportsTableTableManager get dailyReports =>
       $$DailyReportsTableTableManager(_db, _db.dailyReports);
+  $$OrderItemsTableTableManager get orderItems =>
+      $$OrderItemsTableTableManager(_db, _db.orderItems);
 }
