@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../database/database.dart';
 
 class CartSidebar extends StatelessWidget {
   const CartSidebar({super.key});
@@ -79,7 +80,7 @@ class CartSidebar extends StatelessWidget {
 
                             const SizedBox(width: 10),
 
-                            // B. NOMBRE Y PRECIO (Expanded para llenar espacio)
+                            // B. NOMBRE Y PRECIO
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,8 +89,8 @@ class CartSidebar extends StatelessWidget {
                                     item.name,
                                     style: const TextStyle(
                                         color: Colors.white, fontWeight: FontWeight.bold),
-                                    maxLines: 1, // Fuerza una sola línea
-                                    overflow: TextOverflow.ellipsis, // Pone "..." si no cabe
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -100,14 +101,14 @@ class CartSidebar extends StatelessWidget {
                               ),
                             ),
 
-                            // C. BOTÓN BORRAR (Sin márgenes extra)
+                            // C. BOTÓN RESTAR (-1)
                             IconButton(
                               icon: const Icon(Icons.remove_circle_outline, color: nexusRed),
-                              padding: EdgeInsets.zero, // Quita relleno interno
-                              constraints: const BoxConstraints(), // Quita tamaño mínimo
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
                               iconSize: 24,
                               onPressed: () {
-                                cart.removeItem(item.name);
+                                cart.decrementItem(item.name); // ← CORREGIDO
                               },
                             ),
                           ],
@@ -145,7 +146,6 @@ class CartSidebar extends StatelessWidget {
                               fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(width: 10),
-                        // Previene overflow si el precio es muy grande
                         Expanded(
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
@@ -171,9 +171,7 @@ class CartSidebar extends StatelessWidget {
                         ),
                         onPressed: cart.items.isEmpty
                             ? null
-                            : () {
-                          print("Ir a pagar \$${cart.totalAmount}");
-                        },
+                            : () => _processCheckout(context, cart),
                         icon: const Icon(Icons.payment, color: nexusBlue, size: 28),
                         label: const Text(
                           "COBRAR",
@@ -192,5 +190,90 @@ class CartSidebar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ========================================
+  // LÓGICA DEL CHECKOUT (NUEVA)
+  // ========================================
+  Future<void> _processCheckout(BuildContext context, CartProvider cart) async {
+    try {
+      // 1. Obtener acceso a la base de datos
+      final db = context.read<AppDatabase>();
+
+      // 2. Guardar todos los items en la BD
+      final itemsToSave = cart.getItemsForDatabase();
+      await db.orderDao.insertMultipleOrders(itemsToSave);
+
+      // 3. Calcular total para el mensaje
+      final total = cart.totalAmount;
+      final itemCount = cart.totalItems;
+
+      // 4. Limpiar el carrito
+      cart.clearCart();
+
+      // 5. Mostrar confirmación (MEJORADA)
+      if (context.mounted) {
+        // Cerrar cualquier SnackBar anterior
+        ScaffoldMessenger.of(context).clearSnackBars();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Orden registrada - $itemCount items - \${total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade700,
+            duration: const Duration(seconds: 2), // Reducido de 3 a 2
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            margin: const EdgeInsets.only(
+              bottom: 70,
+              left: 20,
+              right: 20,
+            ),
+            dismissDirection: DismissDirection.horizontal,
+          ),
+        );
+      }
+
+      // TODO FUTURO: Aquí conectaremos Mercado Pago
+      // await _processMercadoPagoPayment(total);
+
+    } catch (e) {
+      // Manejo de errores
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Error al procesar orden: $e'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            dismissDirection: DismissDirection.horizontal,
+          ),
+        );
+      }
+      debugPrint('Error en checkout: $e');
+    }
   }
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Importante para leer el carrito
+import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
-import '../widgets/cart_sidebar.dart'; // Importamos el widget nuevo
+import '../widgets/cart_sidebar.dart';
+import '../widgets/stats_panel.dart';
+import 'order_monitor_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,6 +15,44 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+
+  // ============================================
+  // MÉTODO PARA FEEDBACK VISUAL
+  // ============================================
+  void _showAddedToCartFeedback(BuildContext context, String productName) {
+    // Cerrar cualquier SnackBar anterior antes de mostrar uno nuevo
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              '✓ $productName',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF00187A).withOpacity(0.95),
+        duration: const Duration(milliseconds: 600), // Más corto
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.only(
+          bottom: 80, // Más arriba para no estorbar
+          left: 20,
+          right: 20,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        dismissDirection: DismissDirection.horizontal, // Permite deslizar para cerrar
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,30 +66,40 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() => _selectedIndex = index);
             },
             labelType: NavigationRailLabelType.all,
-            // Estilo Nexus (Amarillo/Azul) ya definido en main.dart
             destinations: const [
-              NavigationRailDestination(icon: Icon(Icons.coffee), label: Text('Cafetería')),
-              NavigationRailDestination(icon: Icon(Icons.videogame_asset), label: Text('Rentas')),
-              NavigationRailDestination(icon: Icon(Icons.list_alt), label: Text('Monitor')),
-              NavigationRailDestination(icon: Icon(Icons.settings), label: Text('Admin')),
+              NavigationRailDestination(
+                icon: Icon(Icons.coffee),
+                label: Text('Cafetería'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.videogame_asset),
+                label: Text('Rentas'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.list_alt),
+                label: Text('Monitor'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings),
+                label: Text('Admin'),
+              ),
             ],
           ),
 
           const VerticalDivider(thickness: 1, width: 1),
 
-          // 2. CONTENIDO CENTRAL (GRID DE PRODUCTOS)
+          // 2. CONTENIDO CENTRAL
           Expanded(
-            flex: 3, // Ocupa la mayor parte de la pantalla
+            flex: 3,
             child: _getSelectedScreen(_selectedIndex),
           ),
 
           const VerticalDivider(thickness: 1, width: 1),
 
-          // 3. CARRITO DE COMPRAS (DERECHA) - ¡NUEVO!
-          // Solo lo mostramos si estamos en la pestaña de Cafetería (índice 0)
+          // 3. CARRITO (Solo en Cafetería)
           if (_selectedIndex == 0)
-            const Expanded(
-              flex: 1, // Ocupa menos espacio (1/4 aprox)
+            Expanded(
+              flex: 1,
               child: CartSidebar(),
             ),
         ],
@@ -59,7 +109,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _getSelectedScreen(int index) {
     switch (index) {
-      case 0: // CAFETERÍA
+    // ==========================================
+    // CASO 0: CAFETERÍA
+    // ==========================================
+      case 0:
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -67,7 +120,12 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const Text(
                 "MENÚ PRINCIPAL",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2),
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 20),
               Expanded(
@@ -77,14 +135,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                   children: [
-                    // --- AQUÍ CONECTAMOS LOS BOTONES AL CARRITO ---
                     ProductCard(
                       name: "BUBBLE TEA CONEJOS",
                       price: 89,
                       category: "Bebida",
                       onTap: () {
-                        // ¡AGREGAR AL CARRITO!
                         context.read<CartProvider>().addItem("Bubble Tea Conejos", 89);
+                        _showAddedToCartFeedback(context, "Bubble Tea Conejos");
                       },
                     ),
                     ProductCard(
@@ -93,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       category: "Snack",
                       onTap: () {
                         context.read<CartProvider>().addItem("Nexuleta Clásica", 45);
+                        _showAddedToCartFeedback(context, "Nexuleta Clásica");
                       },
                     ),
                     ProductCard(
@@ -101,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       category: "Snack",
                       onTap: () {
                         context.read<CartProvider>().addItem("Combo Gamer", 120);
+                        _showAddedToCartFeedback(context, "Combo Gamer");
                       },
                     ),
                     ProductCard(
@@ -109,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       category: "Bebida",
                       onTap: () {
                         context.read<CartProvider>().addItem("Frappé Oreo", 65);
+                        _showAddedToCartFeedback(context, "Frappé Oreo");
                       },
                     ),
                     ProductCard(
@@ -117,6 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       category: "Snack",
                       onTap: () {
                         context.read<CartProvider>().addItem("Pizza Individual", 50);
+                        _showAddedToCartFeedback(context, "Pizza Individual");
                       },
                     ),
                   ],
@@ -125,12 +186,173 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         );
+
+    // ==========================================
+    // CASO 1: RENTAS
+    // ==========================================
       case 1:
-        return const Center(child: Text("Rentas Xbox/PlayStation"));
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.videogame_asset, size: 80, color: Colors.white54),
+              SizedBox(height: 20),
+              Text(
+                "Rentas Xbox/PlayStation",
+                style: TextStyle(fontSize: 24, color: Colors.white70),
+              ),
+              SizedBox(height: 10),
+              Text(
+                "Próximamente...",
+                style: TextStyle(color: Colors.white38),
+              ),
+            ],
+          ),
+        );
+
+    // ==========================================
+    // CASO 2: MONITOR DE PEDIDOS
+    // ==========================================
       case 2:
-        return const Center(child: Text("Monitor de Pedidos"));
+        return OrderMonitorScreen();
+
+    // ==========================================
+    // CASO 3: ADMIN - CON ESTADÍSTICAS
+    // ==========================================
       default:
-        return const Center(child: Text("Configuración"));
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "PANEL DE ADMINISTRACIÓN",
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // PANEL DE ESTADÍSTICAS
+              const StatsPanel(),
+
+              const SizedBox(height: 30),
+
+              // BOTONES DE ACCIÓN
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _AdminActionCard(
+                      icon: Icons.picture_as_pdf,
+                      title: "Generar Reporte",
+                      subtitle: "PDF del día",
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Próximamente...")),
+                        );
+                      },
+                    ),
+                    _AdminActionCard(
+                      icon: Icons.cloud_upload,
+                      title: "Sincronizar",
+                      subtitle: "Subir a Drive",
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Próximamente...")),
+                        );
+                      },
+                    ),
+                    _AdminActionCard(
+                      icon: Icons.inventory,
+                      title: "Productos",
+                      subtitle: "Gestionar catálogo",
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Próximamente...")),
+                        );
+                      },
+                    ),
+                    _AdminActionCard(
+                      icon: Icons.history,
+                      title: "Historial",
+                      subtitle: "Ver ventas pasadas",
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Próximamente...")),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
     }
+  }
+}
+
+// ============================================
+// WIDGET AUXILIAR: TARJETA DE ACCIÓN ADMIN
+// ============================================
+class _AdminActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _AdminActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const nexusYellow = Color(0xFFFFDE00);
+    const nexusBlue = Color(0xFF00187A);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: nexusBlue.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: nexusYellow, width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 48, color: nexusYellow),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

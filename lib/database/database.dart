@@ -4,19 +4,20 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'tables.dart';
+import 'daos/order_dao.dart'; // ← IMPORTAR EL DAO
 
 part 'database.g.dart';
 
-// AQUÍ AGREGAMOS 'OrderItems' A LA LISTA  ↓↓↓↓
-@DriftDatabase(tables: [Products, Rentals, DailyReports, OrderItems])
+@DriftDatabase(
+  tables: [Products, Rentals, DailyReports, OrderItems],
+  daos: [OrderDao], // ← REGISTRAR EL DAO AQUÍ
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // Aumentamos la versión porque cambiamos la estructura (de 1 a 2)
   @override
   int get schemaVersion => 2;
 
-  // Esto ayuda a Drift a saber qué hacer cuando subimos de versión (migración)
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
@@ -25,7 +26,6 @@ class AppDatabase extends _$AppDatabase {
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
-          // Si el usuario tenía la versión 1, creamos la tabla nueva
           await m.createTable(orderItems);
         }
       },
