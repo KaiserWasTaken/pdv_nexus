@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../database/database.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
 import '../widgets/cart_sidebar.dart';
 import '../widgets/stats_panel.dart';
 import 'order_monitor_screen.dart';
+import 'product_management_screen.dart'; // ← NUEVA IMPORTACIÓN
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -113,6 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // CASO 0: CAFETERÍA
     // ==========================================
       case 0:
+        final db = context.read<AppDatabase>();
+
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -128,59 +132,66 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // PRODUCTOS DINÁMICOS DESDE LA BD
               Expanded(
-                child: GridView.count(
-                  crossAxisCount: 3,
-                  childAspectRatio: 0.70,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: [
-                    ProductCard(
-                      name: "BUBBLE TEA CONEJOS",
-                      price: 89,
-                      category: "Bebida",
-                      onTap: () {
-                        context.read<CartProvider>().addItem("Bubble Tea Conejos", 89);
-                        _showAddedToCartFeedback(context, "Bubble Tea Conejos");
+                child: StreamBuilder<List<Product>>(
+                  stream: db.productDao.watchActiveProducts(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFFFDE00),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Error: ${snapshot.error}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      );
+                    }
+
+                    final products = snapshot.data ?? [];
+
+                    if (products.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No hay productos disponibles',
+                          style: TextStyle(color: Colors.white54, fontSize: 18),
+                        ),
+                      );
+                    }
+
+                    return GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 0.70,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+
+                        return ProductCard(
+                          name: product.name,
+                          price: product.price,
+                          category: product.category,
+                          onTap: () {
+                            context.read<CartProvider>().addItem(
+                              product.name,
+                              product.price,
+                            );
+                            _showAddedToCartFeedback(context, product.name);
+                          },
+                        );
                       },
-                    ),
-                    ProductCard(
-                      name: "NEXULETA CLÁSICA",
-                      price: 45,
-                      category: "Snack",
-                      onTap: () {
-                        context.read<CartProvider>().addItem("Nexuleta Clásica", 45);
-                        _showAddedToCartFeedback(context, "Nexuleta Clásica");
-                      },
-                    ),
-                    ProductCard(
-                      name: "COMBO GAMER",
-                      price: 120,
-                      category: "Snack",
-                      onTap: () {
-                        context.read<CartProvider>().addItem("Combo Gamer", 120);
-                        _showAddedToCartFeedback(context, "Combo Gamer");
-                      },
-                    ),
-                    ProductCard(
-                      name: "FRAPPÉ OREO",
-                      price: 65,
-                      category: "Bebida",
-                      onTap: () {
-                        context.read<CartProvider>().addItem("Frappé Oreo", 65);
-                        _showAddedToCartFeedback(context, "Frappé Oreo");
-                      },
-                    ),
-                    ProductCard(
-                      name: "PIZZA INDIVIDUAL",
-                      price: 50,
-                      category: "Snack",
-                      onTap: () {
-                        context.read<CartProvider>().addItem("Pizza Individual", 50);
-                        _showAddedToCartFeedback(context, "Pizza Individual");
-                      },
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -274,8 +285,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: "Productos",
                       subtitle: "Gestionar catálogo",
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Próximamente...")),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProductManagementScreen(),
+                          ),
                         );
                       },
                     ),
