@@ -6,7 +6,7 @@ import '../widgets/product_card.dart';
 import '../widgets/cart_sidebar.dart';
 import '../widgets/stats_panel.dart';
 import 'order_monitor_screen.dart';
-import 'product_management_screen.dart'; // ← NUEVA IMPORTACIÓN
+import 'product_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // MÉTODO PARA FEEDBACK VISUAL
   // ============================================
   void _showAddedToCartFeedback(BuildContext context, String productName) {
-    // Cerrar cualquier SnackBar anterior antes de mostrar uno nuevo
     ScaffoldMessenger.of(context).clearSnackBars();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -42,16 +41,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         backgroundColor: const Color(0xFF00187A).withOpacity(0.95),
-        duration: const Duration(milliseconds: 600), // Más corto
+        duration: const Duration(milliseconds: 600),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.only(
-          bottom: 80, // Más arriba para no estorbar
+          bottom: 80,
           left: 20,
           right: 20,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        dismissDirection: DismissDirection.horizontal, // Permite deslizar para cerrar
+        dismissDirection: DismissDirection.horizontal,
       ),
     );
   }
@@ -102,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_selectedIndex == 0)
             Expanded(
               flex: 1,
-              child: CartSidebar(),
+              child: const CartSidebar(),
             ),
         ],
       ),
@@ -160,8 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (products.isEmpty) {
                       return const Center(
                         child: Text(
-                          'No hay productos disponibles',
-                          style: TextStyle(color: Colors.white54, fontSize: 18),
+                          'No hay productos disponibles. Ve a Admin > Productos para agregar.',
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                          textAlign: TextAlign.center,
                         ),
                       );
                     }
@@ -169,23 +169,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     return GridView.builder(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
-                        childAspectRatio: 0.70,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
+                        childAspectRatio: 0.9,
                       ),
                       itemCount: products.length,
                       itemBuilder: (context, index) {
                         final product = products[index];
-
                         return ProductCard(
                           name: product.name,
                           price: product.price,
                           category: product.category,
+                          imagePath: product.imagePath,
                           onTap: () {
-                            context.read<CartProvider>().addItem(
-                              product.name,
-                              product.price,
-                            );
+                            final cart = context.read<CartProvider>();
+                            cart.addItem(product.name, product.price);
                             _showAddedToCartFeedback(context, product.name);
                           },
                         );
@@ -225,10 +223,10 @@ class _HomeScreenState extends State<HomeScreen> {
     // CASO 2: MONITOR DE PEDIDOS
     // ==========================================
       case 2:
-        return OrderMonitorScreen();
+        return const OrderMonitorScreen();
 
     // ==========================================
-    // CASO 3: ADMIN - CON ESTADÍSTICAS
+    // CASO 3: ADMIN - REDISEÑADO PARA HORIZONTAL
     // ==========================================
       default:
         return Padding(
@@ -245,63 +243,74 @@ class _HomeScreenState extends State<HomeScreen> {
                   letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // PANEL DE ESTADÍSTICAS
-              const StatsPanel(),
-
-              const SizedBox(height: 30),
-
-              // BOTONES DE ACCIÓN
+              // ✅ DISEÑO HORIZONTAL OPTIMIZADO
               Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.5,
+                child: Row(
                   children: [
-                    _AdminActionCard(
-                      icon: Icons.picture_as_pdf,
-                      title: "Generar Reporte",
-                      subtitle: "PDF del día",
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Próximamente...")),
-                        );
-                      },
+                    // ESTADÍSTICAS A LA IZQUIERDA (40%)
+                    Expanded(
+                      flex: 4,
+                      child: const StatsPanel(),
                     ),
-                    _AdminActionCard(
-                      icon: Icons.cloud_upload,
-                      title: "Sincronizar",
-                      subtitle: "Subir a Drive",
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Próximamente...")),
-                        );
-                      },
-                    ),
-                    _AdminActionCard(
-                      icon: Icons.inventory,
-                      title: "Productos",
-                      subtitle: "Gestionar catálogo",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ProductManagementScreen(),
+
+                    const SizedBox(width: 16),
+
+                    // BOTONES DE ACCIÓN A LA DERECHA (60%)
+                    Expanded(
+                      flex: 6,
+                      child: GridView.count(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.3, // Ajustado para horizontal
+                        children: [
+                          _AdminActionCard(
+                            icon: Icons.inventory,
+                            title: "Productos",
+                            subtitle: "Gestionar catálogo",
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ProductManagementScreen(),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
-                    _AdminActionCard(
-                      icon: Icons.history,
-                      title: "Historial",
-                      subtitle: "Ver ventas pasadas",
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Próximamente...")),
-                        );
-                      },
+                          _AdminActionCard(
+                            icon: Icons.picture_as_pdf,
+                            title: "Generar Reporte",
+                            subtitle: "PDF del día",
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Próximamente...")),
+                              );
+                            },
+                          ),
+                          _AdminActionCard(
+                            icon: Icons.cloud_upload,
+                            title: "Sincronizar",
+                            subtitle: "Subir a Drive",
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Próximamente...")),
+                              );
+                            },
+                          ),
+                          _AdminActionCard(
+                            icon: Icons.history,
+                            title: "Historial",
+                            subtitle: "Ver ventas pasadas",
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Próximamente...")),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -346,22 +355,24 @@ class _AdminActionCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48, color: nexusYellow),
-            const SizedBox(height: 12),
+            Icon(icon, size: 40, color: nexusYellow), // Reducido de 48 a 40
+            const SizedBox(height: 8),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 16, // Reducido de 18 a 16
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white70,
-                fontSize: 12,
+                fontSize: 11, // Reducido de 12 a 11
               ),
             ),
           ],

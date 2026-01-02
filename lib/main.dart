@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ Importar para SystemChrome
 import 'package:provider/provider.dart';
 import 'database/database.dart';
-import 'providers/cart_provider.dart'; // <--- IMPORTANTE: Importamos el carrito
+import 'providers/cart_provider.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  // ✅ Asegurar inicialización de Flutter
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ FORZAR ORIENTACIÓN HORIZONTAL
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeRight,
+    DeviceOrientation.landscapeLeft,
+  ]);
+
   runApp(
-    // MultiProvider nos deja inyectar varios cerebros a la vez
     MultiProvider(
       providers: [
         // 1. La Base de Datos

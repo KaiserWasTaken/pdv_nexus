@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../database/database.dart';
 import 'add_product_screen.dart';
+import 'edit_product_screen.dart'; // ✅ NUEVO: Importar pantalla de edición
 
 class ProductManagementScreen extends StatelessWidget {
   const ProductManagementScreen({super.key});
@@ -82,7 +83,7 @@ class ProductManagementScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: nexusBlue.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: nexusYellow, width: 1.5),
+                    border: Border.all(color: nexusYellow, width: 2),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -91,7 +92,7 @@ class ProductManagementScreen extends StatelessWidget {
                         icon: Icons.inventory_2,
                         label: "Total",
                         value: "${stats['total']}",
-                        color: Colors.white,
+                        color: nexusYellow,
                       ),
                       _StatChip(
                         icon: Icons.local_drink,
@@ -133,7 +134,7 @@ class ProductManagementScreen extends StatelessWidget {
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(
-                        "Error: ${snapshot.error}",
+                        'Error: ${snapshot.error}',
                         style: const TextStyle(color: Colors.red),
                       ),
                     );
@@ -194,10 +195,11 @@ class ProductManagementScreen extends StatelessWidget {
                             return _ProductCard(
                               product: product,
                               onEdit: () {
-                                // TODO: Implementar edición
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Edición próximamente..."),
+                                // ✅ NAVEGAR A EDICIÓN
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditProductScreen(product: product),
                                   ),
                                 );
                               },
@@ -232,6 +234,14 @@ class ProductManagementScreen extends StatelessWidget {
 
                                 if (confirm == true) {
                                   await db.productDao.deleteProduct(product.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('${product.name} desactivado'),
+                                        backgroundColor: Colors.orange,
+                                      ),
+                                    );
+                                  }
                                 }
                               },
                             );
@@ -328,7 +338,6 @@ class _ProductCard extends StatelessWidget {
               ? ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.file(
-              // TODO: Implementar carga de imagen
               File(product.imagePath!),
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Icon(
@@ -344,6 +353,7 @@ class _ProductCard extends StatelessWidget {
                 ? Icons.local_drink
                 : Icons.fastfood,
             color: Colors.white70,
+            size: 28,
           ),
         ),
         title: Text(
@@ -356,19 +366,21 @@ class _ProductCard extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (product.subcategory != null)
-              Text(
-                product.subcategory!,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-              ),
             Text(
-              "\$${product.price.toStringAsFixed(2)}",
+              '\$${product.price.toStringAsFixed(2)}',
               style: const TextStyle(
                 color: nexusYellow,
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
               ),
             ),
+            if (product.subcategory != null)
+              Text(
+                product.subcategory!,
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 12,
+                ),
+              ),
           ],
         ),
         trailing: Row(
@@ -378,11 +390,13 @@ class _ProductCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.blue),
               onPressed: onEdit,
+              tooltip: 'Editar',
             ),
-            // BOTÓN ELIMINAR
+            // BOTÓN DESACTIVAR
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: onDelete,
+              tooltip: 'Desactivar',
             ),
           ],
         ),

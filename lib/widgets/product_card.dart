@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 class ProductCard extends StatelessWidget {
   final String name;
   final double price;
   final String category;
+  final String? imagePath; // ✅ NUEVO: Ruta de imagen
   final VoidCallback onTap;
 
   const ProductCard({
@@ -11,6 +13,7 @@ class ProductCard extends StatelessWidget {
     required this.name,
     required this.price,
     required this.category,
+    this.imagePath, // ✅ NUEVO: Parámetro opcional
     required this.onTap,
   });
 
@@ -35,14 +38,10 @@ class ProductCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ICONO
+              // ✅ IMAGEN O ÍCONO
               Flexible(
-                flex: 2,
-                child: Icon(
-                  category == 'Bebida' ? Icons.local_drink : Icons.fastfood,
-                  size: 32,
-                  color: Colors.white70,
-                ),
+                flex: 3,
+                child: _buildImageOrIcon(category),
               ),
 
               const SizedBox(height: 8),
@@ -78,6 +77,55 @@ class ProductCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // ✅ NUEVO: Construir imagen o ícono según disponibilidad
+  Widget _buildImageOrIcon(String category) {
+    // Si hay imagen, mostrarla
+    if (imagePath != null && imagePath!.isNotEmpty) {
+      final imageFile = File(imagePath!);
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.file(
+          imageFile,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            // Si la imagen no se puede cargar, mostrar ícono
+            return _buildFallbackIcon(category);
+          },
+        ),
+      );
+    }
+
+    // Si no hay imagen, mostrar ícono por categoría
+    return _buildFallbackIcon(category);
+  }
+
+  // ✅ NUEVO: Ícono de respaldo por categoría
+  Widget _buildFallbackIcon(String category) {
+    IconData icon;
+
+    switch (category.toLowerCase()) {
+      case 'bebida':
+        icon = Icons.local_drink;
+        break;
+      case 'comida':
+        icon = Icons.fastfood;
+        break;
+      case 'paquete':
+        icon = Icons.card_giftcard;
+        break;
+      default:
+        icon = Icons.inventory_2;
+    }
+
+    return Icon(
+      icon,
+      size: 48,
+      color: Colors.white70,
     );
   }
 }

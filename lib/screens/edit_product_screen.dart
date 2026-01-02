@@ -1,30 +1,39 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:image_picker/image_picker.dart';
 import '../database/database.dart';
 import '../services/image_service.dart';
 
-class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({super.key});
+class EditProductScreen extends StatefulWidget {
+  final Product product;
+
+  const EditProductScreen({
+    super.key,
+    required this.product,
+  });
 
   @override
-  State<AddProductScreen> createState() => _AddProductScreenState();
+  State<EditProductScreen> createState() => _EditProductScreenState();
 }
 
-class _AddProductScreenState extends State<AddProductScreen> {
+class _EditProductScreenState extends State<EditProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _priceController;
+  late TextEditingController _descriptionController;
   final ImageService _imageService = ImageService();
 
-  String _productType = 'simple';
-  String _selectedCategory = 'Bebida';
+  late String _productType;
+  late String _selectedCategory;
   String? _selectedSubcategory;
-  File? _selectedImage; // ✅ NUEVO: Imagen seleccionada
 
-  // Subcategorías por categoría
+  // ✅ NUEVO: Manejo de imágenes
+  String? _currentImagePath; // Imagen actual del producto
+  File? _newImage; // Nueva imagen seleccionada (si se cambia)
+  bool _deleteCurrentImage = false; // Flag para eliminar imagen actual
+
   final Map<String, List<String>> _subcategories = {
     'Bebida': [
       'Bubble Tea Base Agua',
@@ -48,6 +57,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.product.name);
+    _priceController = TextEditingController(text: widget.product.price.toString());
+    _descriptionController = TextEditingController(text: widget.product.description ?? '');
+
+    _productType = widget.product.productType;
+    _selectedCategory = widget.product.category;
+    _selectedSubcategory = widget.product.subcategory;
+    _currentImagePath = widget.product.imagePath; // ✅ Cargar imagen actual
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _priceController.dispose();
@@ -55,7 +77,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     super.dispose();
   }
 
-  // ✅ NUEVO: Método para seleccionar imagen
+  // ✅ NUEVO: Seleccionar nueva imagen
   Future<void> _pickImage() async {
     final source = await ImageService.showImageSourceDialog(context);
     if (source == null) return;
@@ -63,15 +85,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final image = await _imageService.pickAndCropImage(source: source);
     if (image != null) {
       setState(() {
-        _selectedImage = image;
+        _newImage = image;
+        _deleteCurrentImage = false; // Si selecciona nueva, no eliminar la actual
       });
     }
   }
 
-  // ✅ NUEVO: Método para eliminar imagen
+  // ✅ NUEVO: Eliminar imagen (marcar para eliminar)
   void _removeImage() {
     setState(() {
-      _selectedImage = null;
+      if (_newImage != null) {
+        // Si hay imagen nueva seleccionada, eliminarla
+        _newImage = null;
+      } else if (_currentImagePath != null) {
+        // Si hay imagen actual, marcarla para eliminar
+        _deleteCurrentImage = true;
+      }
+    });
+  }
+
+  // ✅ NUEVO: Cancelar eliminación
+  void _undoRemoveImage() {
+    setState(() {
+      _deleteCurrentImage = false;
     });
   }
 
@@ -96,7 +132,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  "AGREGAR PRODUCTO",
+                  "EDITAR PRODUCTO",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
@@ -117,7 +153,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // TIPO DE PRODUCTO
+                      // TIPO DE PRODUCTO (SOLO VISUAL, NO EDITABLE)
                       const Text(
                         "Tipo de Producto",
                         style: TextStyle(
@@ -127,38 +163,43 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _TypeButton(
-                              label: "Producto Simple",
-                              icon: Icons.inventory_2,
-                              isSelected: _productType == 'simple',
-                              onTap: () {
-                                setState(() {
-                                  _productType = 'simple';
-                                  _selectedCategory = 'Bebida';
-                                  _selectedSubcategory = null;
-                                });
-                              },
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: nexusYellow.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: nexusYellow, width: 2),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _productType == 'simple'
+                                  ? Icons.inventory_2
+                                  : Icons.card_giftcard,
+                              color: nexusYellow,
+                              size: 32,
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _TypeButton(
-                              label: "Paquete/Combo",
-                              icon: Icons.card_giftcard,
-                              isSelected: _productType == 'paquete',
-                              onTap: () {
-                                setState(() {
-                                  _productType = 'paquete';
-                                  _selectedCategory = 'Paquete';
-                                  _selectedSubcategory = null;
-                                });
-                              },
+                            const SizedBox(width: 12),
+                            Text(
+                              _productType == 'simple'
+                                  ? 'Producto Simple'
+                                  : 'Paquete/Combo',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                            const Spacer(),
+                            const Text(
+                              '(No editable)',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 30),
@@ -229,7 +270,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           onChanged: (value) {
                             setState(() {
                               _selectedCategory = value!;
-                              _selectedSubcategory = null;
+                              if (_selectedSubcategory != null &&
+                                  !_subcategories[_selectedCategory]!
+                                      .contains(_selectedSubcategory)) {
+                                _selectedSubcategory = null;
+                              }
                             });
                           },
                         ),
@@ -297,7 +342,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                       // Contenedor de imagen
                       InkWell(
-                        onTap: _selectedImage == null ? _pickImage : null,
+                        onTap: (_newImage == null && !_deleteCurrentImage)
+                            ? _pickImage
+                            : null,
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           height: 200,
@@ -306,71 +353,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             color: nexusBlue.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: nexusYellow,
+                              color: _deleteCurrentImage ? Colors.red : nexusYellow,
                               width: 2,
                             ),
                           ),
-                          child: _selectedImage == null
-                              ? const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_photo_alternate,
-                                size: 48,
-                                color: Colors.white54,
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                "Toca para agregar imagen",
-                                style: TextStyle(color: Colors.white54),
-                              ),
-                            ],
-                          )
-                              : ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.file(
-                              _selectedImage!,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                          child: _buildImageContent(),
                         ),
                       ),
 
-                      // Botones de acción de imagen (si hay imagen)
-                      if (_selectedImage != null) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _pickImage,
-                                icon: const Icon(Icons.edit, size: 20),
-                                label: const Text("Cambiar"),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: nexusYellow,
-                                  side: const BorderSide(color: nexusYellow),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _removeImage,
-                                icon: const Icon(Icons.delete, size: 20),
-                                label: const Text("Eliminar"),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      // Botones de acción de imagen
+                      const SizedBox(height: 10),
+                      _buildImageActions(),
 
                       const SizedBox(height: 40),
 
-                      // BOTÓN GUARDAR
+                      // BOTÓN GUARDAR CAMBIOS
                       SizedBox(
                         width: double.infinity,
                         height: 60,
@@ -379,10 +376,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             backgroundColor: nexusYellow,
                             foregroundColor: nexusBlue,
                           ),
-                          onPressed: _saveProduct,
+                          onPressed: _updateProduct,
                           icon: const Icon(Icons.save, size: 28),
                           label: const Text(
-                            "GUARDAR PRODUCTO",
+                            "GUARDAR CAMBIOS",
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -397,6 +394,204 @@ class _AddProductScreenState extends State<AddProductScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ✅ NUEVO: Construir contenido de imagen según estado
+  Widget _buildImageContent() {
+    // Caso 1: Hay nueva imagen seleccionada
+    if (_newImage != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          _newImage!,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    // Caso 2: Imagen actual marcada para eliminar
+    if (_deleteCurrentImage && _currentImagePath != null) {
+      return Stack(
+        children: [
+          Opacity(
+            opacity: 0.3,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.file(
+                File(_currentImagePath!),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.delete_forever, size: 64, color: Colors.red),
+                SizedBox(height: 8),
+                Text(
+                  "Se eliminará al guardar",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Caso 3: Hay imagen actual (sin cambios)
+    if (_currentImagePath != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          File(_currentImagePath!),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.broken_image, size: 48, color: Colors.white54),
+                SizedBox(height: 8),
+                Text(
+                  "Imagen no encontrada",
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Caso 4: Sin imagen
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.add_photo_alternate,
+          size: 48,
+          color: Colors.white54,
+        ),
+        SizedBox(height: 10),
+        Text(
+          "Toca para agregar imagen",
+          style: TextStyle(color: Colors.white54),
+        ),
+      ],
+    );
+  }
+
+  // ✅ NUEVO: Construir botones de acción según estado
+  Widget _buildImageActions() {
+    const nexusYellow = Color(0xFFFFDE00);
+
+    // Si hay nueva imagen seleccionada
+    if (_newImage != null) {
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _pickImage,
+              icon: const Icon(Icons.edit, size: 20),
+              label: const Text("Cambiar"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: nexusYellow,
+                side: const BorderSide(color: nexusYellow),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _removeImage,
+              icon: const Icon(Icons.close, size: 20),
+              label: const Text("Cancelar"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Si imagen actual está marcada para eliminar
+    if (_deleteCurrentImage && _currentImagePath != null) {
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _undoRemoveImage,
+              icon: const Icon(Icons.undo, size: 20),
+              label: const Text("Deshacer"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: nexusYellow,
+                side: const BorderSide(color: nexusYellow),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _pickImage,
+              icon: const Icon(Icons.add_photo_alternate, size: 20),
+              label: const Text("Nueva imagen"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.green,
+                side: const BorderSide(color: Colors.green),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Si hay imagen actual (sin cambios)
+    if (_currentImagePath != null) {
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _pickImage,
+              icon: const Icon(Icons.edit, size: 20),
+              label: const Text("Cambiar"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: nexusYellow,
+                side: const BorderSide(color: nexusYellow),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _removeImage,
+              icon: const Icon(Icons.delete, size: 20),
+              label: const Text("Eliminar"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Sin imagen - solo botón para agregar
+    return OutlinedButton.icon(
+      onPressed: _pickImage,
+      icon: const Icon(Icons.add_photo_alternate, size: 20),
+      label: const Text("Agregar Imagen"),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: nexusYellow,
+        side: const BorderSide(color: nexusYellow),
       ),
     );
   }
@@ -453,7 +648,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Future<void> _saveProduct() async {
+  Future<void> _updateProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
     final db = context.read<AppDatabase>();
@@ -462,31 +657,45 @@ class _AddProductScreenState extends State<AddProductScreen> {
       final name = _nameController.text.trim();
       final price = double.parse(_priceController.text.trim());
       final description = _descriptionController.text.trim();
-      final imagePath = _selectedImage?.path; // ✅ Obtener ruta de imagen
 
-      if (_productType == 'simple') {
-        await db.productDao.insertProduct(
-          name: name,
-          price: price,
-          category: _selectedCategory,
-          subcategory: _selectedSubcategory,
-          description: description.isEmpty ? null : description,
-          imagePath: imagePath, // ✅ Guardar ruta de imagen
-        );
+      // ✅ Determinar ruta de imagen final
+      String? finalImagePath;
+
+      if (_newImage != null) {
+        // Usar nueva imagen
+        finalImagePath = _newImage!.path;
+        // Eliminar imagen anterior si existía
+        if (_currentImagePath != null) {
+          await _imageService.deleteImage(_currentImagePath!);
+        }
+      } else if (_deleteCurrentImage) {
+        // Eliminar imagen actual
+        if (_currentImagePath != null) {
+          await _imageService.deleteImage(_currentImagePath!);
+        }
+        finalImagePath = null;
       } else {
-        await db.productDao.insertPackage(
-          name: name,
-          price: price,
-          description: description,
-          imagePath: imagePath, // ✅ Guardar ruta de imagen
-          items: [],
-        );
+        // Mantener imagen actual
+        finalImagePath = _currentImagePath;
       }
+
+      // Actualizar producto
+      await db.productDao.updateProduct(
+        widget.product.id,
+        ProductsCompanion(
+          name: drift.Value(name),
+          price: drift.Value(price),
+          category: drift.Value(_selectedCategory),
+          subcategory: drift.Value(_selectedSubcategory),
+          description: drift.Value(description.isEmpty ? null : description),
+          imagePath: drift.Value(finalImagePath), // ✅ Actualizar ruta de imagen
+        ),
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Producto guardado exitosamente'),
+            content: Text('✅ Producto actualizado exitosamente'),
             backgroundColor: Colors.green,
           ),
         );
@@ -502,64 +711,5 @@ class _AddProductScreenState extends State<AddProductScreen> {
         );
       }
     }
-  }
-}
-
-// ============================================
-// WIDGET: BOTÓN DE TIPO
-// ============================================
-class _TypeButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _TypeButton({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const nexusYellow = Color(0xFFFFDE00);
-    const nexusBlue = Color(0xFF00187A);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? nexusYellow.withOpacity(0.2)
-              : nexusBlue.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? nexusYellow : Colors.white30,
-            width: isSelected ? 3 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 40,
-              color: isSelected ? nexusYellow : Colors.white54,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isSelected ? nexusYellow : Colors.white70,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
