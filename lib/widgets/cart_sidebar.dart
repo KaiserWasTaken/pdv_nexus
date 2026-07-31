@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:drift/drift.dart' hide Column; // ✅ Añadido para Value
 import '../providers/cart_provider.dart';
 import '../database/database.dart';
 
@@ -14,7 +15,7 @@ class CartSidebar extends StatelessWidget {
     const nexusRed = Color(0xFFE62117);
 
     return Container(
-      width: 320,
+      // width: 320, // Eliminado para ser responsivo
       color: Colors.black26,
       child: Column(
         children: [
@@ -193,87 +194,73 @@ class CartSidebar extends StatelessWidget {
   }
 
   // ========================================
-  // LÓGICA DEL CHECKOUT (NUEVA)
+  // LÓGICA DEL CHECKOUT (ACTUALIZADA)
   // ========================================
   Future<void> _processCheckout(BuildContext context, CartProvider cart) async {
     try {
-      // 1. Obtener acceso a la base de datos
       final db = context.read<AppDatabase>();
+      final items = cart.items;
 
-      // 2. Guardar todos los items en la BD
-      final itemsToSave = cart.getItemsForDatabase();
-      await db.orderDao.insertMultipleOrders(itemsToSave);
+      // 1. Registrar todo en el historial de ventas
+      final now = DateTime.now();
+      final List<OrderItemsCompanion> companions = items.map((item) {
+        String category;
+        if (item.type == CartItemType.rental) {
+          category = 'Rentas';
+        } else {
+          category = 'Bebidas'; 
+        }
 
-      // 3. Calcular total para el mensaje
+        return OrderItemsCompanion.insert(
+          productName: item.name,
+          priceAtSale: item.price,
+          quantity: Value(item.quantity),
+          status: Value(item.type == CartItemType.rental ? 'entregado' : 'pendiente'),
+          category: Value(category),
+          orderDate: Value(now), // ✅ Hora exacta del cobro
+        );
+      }).toList();
+
+      await db.orderDao.insertCompanions(companions);
+
+      // 2. LÓGICA ESPECIAL PARA RENTAS: Iniciar timers
+      for (var item in items) {
+        if (item.type == CartItemType.rental && item.consoleName != null) {
+          final startTime = DateTime.now();
+          final expectedEndTime = startTime.add(Duration(minutes: item.minutes ?? 0));
+
+          await db.rentalDao.startRental(
+            consoleName: item.consoleName!,
+            startTime: startTime,
+            expectedEndTime: expectedEndTime,
+            extraControllers: item.extraControllers ?? 0,
+          );
+        }
+      }
+
       final total = cart.totalAmount;
-      final itemCount = cart.totalItems;
 
-      // 4. Limpiar el carrito
+      // 3. Limpiar el carrito
       cart.clearCart();
 
-      // 5. Mostrar confirmación (MEJORADA)
+      // 4. Confirmación
       if (context.mounted) {
-        // Cerrar cualquier SnackBar anterior
         ScaffoldMessenger.of(context).clearSnackBars();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Orden registrada - $itemCount items - \${total.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            content: Text('Venta completada: \$${total.toStringAsFixed(2)} - Timers iniciados'),
             backgroundColor: Colors.green.shade700,
-            duration: const Duration(seconds: 2), // Reducido de 3 a 2
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            margin: const EdgeInsets.only(
-              bottom: 70,
-              left: 20,
-              right: 20,
-            ),
-            dismissDirection: DismissDirection.horizontal,
           ),
         );
       }
-
-      // TODO FUTURO: Aquí conectaremos Mercado Pago
-      // await _processMercadoPagoPayment(total);
-
     } catch (e) {
-      // Manejo de errores
       if (context.mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text('Error al procesar orden: $e'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red.shade700,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            dismissDirection: DismissDirection.horizontal,
-          ),
+          SnackBar(content: Text('Error al cobrar: $e'), backgroundColor: Colors.red.shade700),
         );
       }
-      debugPrint('Error en checkout: $e');
     }
   }
 }

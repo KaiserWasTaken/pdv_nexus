@@ -5,7 +5,8 @@ class ProductCard extends StatelessWidget {
   final String name;
   final double price;
   final String category;
-  final String? imagePath; // ✅ NUEVO: Ruta de imagen
+  final String? description; // ✅ NUEVO: Para mostrar contenido de combos
+  final String? imagePath;
   final VoidCallback onTap;
 
   const ProductCard({
@@ -13,7 +14,8 @@ class ProductCard extends StatelessWidget {
     required this.name,
     required this.price,
     required this.category,
-    this.imagePath, // ✅ NUEVO: Parámetro opcional
+    this.description, // ✅ NUEVO
+    this.imagePath,
     required this.onTap,
   });
 
@@ -21,6 +23,8 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const nexusYellow = Color(0xFFFFDE00);
     const nexusBlue = Color(0xFF00187A);
+
+    bool isCombo = category == 'Combos' && description != null;
 
     return InkWell(
       onTap: onTap,
@@ -33,44 +37,50 @@ class ProductCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(12.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ✅ IMAGEN O ÍCONO
-              Flexible(
-                flex: 3,
-                child: _buildImageOrIcon(category),
+              // NOMBRE DEL PRODUCTO
+              Text(
+                name,
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: isCombo ? 20 : 24, // Un poco más pequeño si es combo para dar espacio
+                  color: Colors.white,
+                  height: 1.1,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
+
+              if (isCombo) ...[
+                const SizedBox(height: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _buildDescriptionBullets(description!),
+                    ),
+                  ),
+                ),
+              ] else
+                const Expanded(child: SizedBox()),
 
               const SizedBox(height: 8),
 
-              // NOMBRE DEL PRODUCTO
-              Flexible(
-                flex: 2,
+              // PRECIO
+              FittedBox(
+                fit: BoxFit.scaleDown,
                 child: Text(
-                  name,
+                  '\$${price.toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 11,
-                    color: Colors.white,
+                    fontSize: 22,
+                    color: nexusYellow,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-
-              const SizedBox(height: 4),
-
-              // PRECIO
-              Text(
-                '\$${price.toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                  color: nexusYellow,
                 ),
               ),
             ],
@@ -80,52 +90,36 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  // ✅ NUEVO: Construir imagen o ícono según disponibilidad
-  Widget _buildImageOrIcon(String category) {
-    // Si hay imagen, mostrarla
-    if (imagePath != null && imagePath!.isNotEmpty) {
-      final imageFile = File(imagePath!);
+  List<Widget> _buildDescriptionBullets(String desc) {
+    // Dividir por "+" o "," o "." para crear viñetas
+    final items = desc.split(RegExp(r'[+\.\n]')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.file(
-          imageFile,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          errorBuilder: (context, error, stackTrace) {
-            // Si la imagen no se puede cargar, mostrar ícono
-            return _buildFallbackIcon(category);
-          },
+    return items.map((item) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4), // Aumentado de 2 a 4
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("• ",
+                style: TextStyle(
+                  color: Color(0xFFFFDE00),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20, // Viñeta más grande
+                )),
+            Expanded(
+              child: Text(
+                item,
+                style: const TextStyle(
+                  color: Colors.white, // De blanco70 a blanco puro para mejor contraste
+                  fontSize: 18, // Aumentado de 14 a 18
+                  fontWeight: FontWeight.w600, // Un poco más de peso
+                  height: 1.1,
+                ),
+              ),
+            ),
+          ],
         ),
       );
-    }
-
-    // Si no hay imagen, mostrar ícono por categoría
-    return _buildFallbackIcon(category);
-  }
-
-  // ✅ NUEVO: Ícono de respaldo por categoría
-  Widget _buildFallbackIcon(String category) {
-    IconData icon;
-
-    switch (category.toLowerCase()) {
-      case 'bebida':
-        icon = Icons.local_drink;
-        break;
-      case 'comida':
-        icon = Icons.fastfood;
-        break;
-      case 'paquete':
-        icon = Icons.card_giftcard;
-        break;
-      default:
-        icon = Icons.inventory_2;
-    }
-
-    return Icon(
-      icon,
-      size: 48,
-      color: Colors.white70,
-    );
+    }).toList();
   }
 }

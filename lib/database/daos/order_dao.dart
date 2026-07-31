@@ -11,30 +11,22 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
   // ========================================
   // 1. INSERTAR ORDEN COMPLETA
   // ========================================
-  Future<void> insertOrder(String productName, double price, int quantity) async {
+  Future<void> insertOrder(String productName, double price, int quantity, {String? category, DateTime? date}) async {
     await into(orderItems).insert(
       OrderItemsCompanion.insert(
         productName: productName,
         priceAtSale: price,
-        quantity: Value(quantity), // ← ENVUELTO EN Value()
-        // status y orderDate usan valores por defecto
+        quantity: Value(quantity),
+        category: Value(category),
+        orderDate: Value(date ?? DateTime.now()), // ← Preferimos la hora de Dart
       ),
     );
   }
 
-  // Método para insertar múltiples items (desde el carrito)
-  Future<void> insertMultipleOrders(List<Map<String, dynamic>> items) async {
+  // Método para insertar múltiples items con sus estatus específicos
+  Future<void> insertCompanions(List<OrderItemsCompanion> companions) async {
     await batch((batch) {
-      for (var item in items) {
-        batch.insert(
-          orderItems,
-          OrderItemsCompanion.insert(
-            productName: item['name'] as String,
-            priceAtSale: item['price'] as double,
-            quantity: Value(item['quantity'] as int), // ← ENVUELTO EN Value()
-          ),
-        );
-      }
+      batch.insertAll(orderItems, companions);
     });
   }
 
@@ -44,7 +36,7 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
   // Stream que se actualiza automáticamente cuando cambia la BD
   Stream<List<OrderItem>> watchPendingOrders() {
     return (select(orderItems)
-      ..where((tbl) => tbl.status.equals('pendiente'))
+      ..where((tbl) => tbl.status.equals('pendiente') & tbl.reportId.isNull())
       ..orderBy([
             (t) => OrderingTerm(expression: t.orderDate, mode: OrderingMode.desc)
       ]))
@@ -54,7 +46,7 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
   // Método de consulta única (sin stream)
   Future<List<OrderItem>> getPendingOrders() {
     return (select(orderItems)
-      ..where((tbl) => tbl.status.equals('pendiente'))
+      ..where((tbl) => tbl.status.equals('pendiente') & tbl.reportId.isNull())
       ..orderBy([
             (t) => OrderingTerm(expression: t.orderDate, mode: OrderingMode.desc)
       ]))
@@ -80,7 +72,7 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
   // ========================================
   Stream<List<OrderItem>> watchDeliveredOrders() {
     return (select(orderItems)
-      ..where((tbl) => tbl.status.equals('entregado'))
+      ..where((tbl) => tbl.status.equals('entregado') & tbl.reportId.isNull())
       ..orderBy([
             (t) => OrderingTerm(expression: t.orderDate, mode: OrderingMode.desc)
       ]))
@@ -88,41 +80,63 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
   }
 
   // ========================================
-  // 5. ESTADÍSTICAS DEL DÍA
+  // 5. ESTADÍSTICAS DEL DÍA (SÓLO ACTIVAS)
   // ========================================
-  Future<Map<String, dynamic>> getTodayStats() async {
-    final today = DateTime.now();
-    final startOfDay = DateTime(today.year, today.month, today.day);
+  Stream<Map<String, dynamic>> watchTodayStats() {
+    return (select(orderItems)..where((tbl) => tbl.reportId.isNull()))
+        .watch()
+        .map((orders) {
+      double totalSales = 0;
+      int totalItems = 0;
 
-    // Obtener todas las órdenes del día
-    final todaysOrders = await (select(orderItems)
-      ..where((tbl) => tbl.orderDate.isBiggerOrEqualValue(startOfDay)))
+      for (var order in orders) {
+        totalSales += order.priceAtSale * order.quantity;
+        totalItems += order.quantity;
+      }
+
+      return {
+        'totalSales': totalSales,
+        'totalItems': totalItems,
+        'ordersCount': orders.length,
+      };
+    });
+  }
+
+  Future<Map<String, dynamic>> getTodayStats() async {
+    // Obtener todas las órdenes que no han sido cerradas en un reporte
+    final activeOrders = await (select(orderItems)
+      ..where((tbl) => tbl.reportId.isNull()))
         .get();
 
     // Calcular totales
     double totalSales = 0;
     int totalItems = 0;
-    int pendingCount = 0;
-    int deliveredCount = 0;
 
-    for (var order in todaysOrders) {
+    for (var order in activeOrders) {
       totalSales += order.priceAtSale * order.quantity;
       totalItems += order.quantity;
-
-      if (order.status == 'pendiente') {
-        pendingCount++;
-      } else if (order.status == 'entregado') {
-        deliveredCount++;
-      }
     }
 
     return {
       'totalSales': totalSales,
       'totalItems': totalItems,
-      'pendingOrders': pendingCount,
-      'deliveredOrders': deliveredCount,
-      'ordersCount': todaysOrders.length,
+      'ordersCount': activeOrders.length,
     };
+  }
+
+  // Método para obtener todas las ventas del día (para el reporte PDF) - SÓLO ACTIVAS
+  Future<List<OrderItem>> getActiveOrders() {
+    return (select(orderItems)
+          ..where((tbl) => tbl.reportId.isNull())
+          ..orderBy([(t) => OrderingTerm(expression: t.orderDate)]))
+        .get();
+  }
+
+  // CERRAR ÓRDENES: Vincularlas a un reporte
+  Future<int> closeActiveOrders(int reportId) async {
+    return await (update(orderItems)..where((tbl) => tbl.reportId.isNull())).write(
+      OrderItemsCompanion(reportId: Value(reportId)),
+    );
   }
 
   // ========================================

@@ -5,124 +5,192 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'tables.dart';
 import 'daos/order_dao.dart';
-import 'daos/product_dao.dart'; // ← NUEVO
+import 'daos/product_dao.dart';
+import 'daos/rental_dao.dart'; // ✅ NUEVO
 
 part 'database.g.dart';
 
 @DriftDatabase(
   tables: [Products, Rentals, DailyReports, OrderItems, PackageItems, ProductModifiers],
-  daos: [OrderDao, ProductDao], // ← AGREGAR ProductDao
+  daos: [OrderDao, ProductDao, RentalDao], // ✅ AGREGAR RentalDao
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3; // ← INCREMENTAR VERSIÓN
+  int get schemaVersion => 9; // ← INCREMENTAR VERSIÓN
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+        await _insertSampleProducts();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        if (from < 2) {
-          await m.createTable(orderItems);
-        }
+        if (from < 2) await m.createTable(orderItems);
         if (from < 3) {
-          // Recrear tabla Products con nuevos campos
           await m.deleteTable(products.actualTableName);
           await m.createTable(products);
           await m.createTable(packageItems);
           await m.createTable(productModifiers);
-
-          // Insertar productos de ejemplo
+        }
+        if (from < 4) {
+          await m.deleteTable(products.actualTableName);
+          await m.createTable(products);
           await _insertSampleProducts();
+        }
+        if (from < 5) {
+          await m.deleteTable(products.actualTableName);
+          await m.createTable(products);
+          await _insertSampleProducts();
+        }
+        if (from < 6) {
+          await m.addColumn(rentals, rentals.expectedEndTime);
+          await m.addColumn(rentals, rentals.extraControllers);
+        }
+        if (from < 7) {
+          await m.addColumn(orderItems, orderItems.category);
+        }
+        if (from < 8) {
+          // Recrear OrderItems para asegurar currentDateAndTime y tipo correcto de category
+          await m.deleteTable(orderItems.actualTableName);
+          await m.createTable(orderItems);
+        }
+        if (from < 9) {
+          await m.addColumn(orderItems, orderItems.reportId);
         }
       },
     );
   }
 
   // ========================================
-  // PRODUCTOS DE EJEMPLO
+  // CATÁLOGO REAL DE PRODUCTOS
   // ========================================
   Future<void> _insertSampleProducts() async {
     await batch((batch) {
-      // Bubble Teas
-      batch.insert(
-        products,
-        ProductsCompanion.insert(
-          name: 'Bubble Tea Conejos',
-          price: 89,
-          category: 'Bebida',
-          subcategory: const Value('Bubble Tea Base Agua'),
-          description: const Value('Refrescante bubble tea con sabor a frutas'),
-        ),
-      );
+      // --- BEBIDAS ($70) ---
+      final bubbleTeas = [
+        'Oreo', 'Fresas con crema', 'Taro purple', 'Mora azul',
+        'Moka intenso', 'Mazapán', 'Horchata', 'Red velvet',
+        'Algodón de azúcar', 'Matcha', 'Ferrero'
+      ];
+      for (var name in bubbleTeas) {
+        batch.insert(products, ProductsCompanion.insert(
+          name: 'Bubble Tea $name',
+          price: 70,
+          category: 'Bebidas',
+          subcategory: const Value('Bubble Tea'),
+          description: const Value('Delicioso frappe de bubble tea con ricas tapiocas'),
+        ));
+      }
 
-      batch.insert(
-        products,
-        ProductsCompanion.insert(
-          name: 'Bubble Tea Taro',
-          price: 89,
-          category: 'Bebida',
-          subcategory: const Value('Bubble Tea Base Leche'),
-          description: const Value('Cremoso bubble tea de taro con perlas'),
-        ),
-      );
+      final chamoyadas = ['Tamarindo', 'Fresa', 'Pelón Pelorico', 'Mango'];
+      for (var name in chamoyadas) {
+        batch.insert(products, ProductsCompanion.insert(
+          name: 'Chamoyada de $name',
+          price: 70,
+          category: 'Bebidas',
+          subcategory: const Value('Chamoyada'),
+          description: const Value('Rica chamoyada con salsa o chamoy, miguelito o tajín'),
+        ));
+      }
 
-      // Sodas
-      batch.insert(
-        products,
-        ProductsCompanion.insert(
-          name: 'Soda Italiana Fresa',
-          price: 45,
-          category: 'Bebida',
+      final smoothies = ['Pepino Limón', 'Frutos Rojos', 'Fresa Sandía'];
+      for (var name in smoothies) {
+        batch.insert(products, ProductsCompanion.insert(
+          name: 'Smoothie de $name',
+          price: 70,
+          category: 'Bebidas',
+          subcategory: const Value('Smoothie'),
+          description: const Value('Refrescante smoothie frutal'),
+        ));
+      }
+
+      final sodas = ['Maracuya', 'Fruta Del Dragón', 'Berry', 'Manzana Verde', 'Blue Berry'];
+      for (var name in sodas) {
+        batch.insert(products, ProductsCompanion.insert(
+          name: name == 'Fruta Del Dragón' ? name : 'Soda Italiana $name',
+          price: 70,
+          category: 'Bebidas',
           subcategory: const Value('Soda Italiana'),
-        ),
-      );
+          description: const Value('Rica soda italiana con deliciosas perlas explosivas'),
+        ));
+      }
 
-      // Comidas
-      batch.insert(
-        products,
-        ProductsCompanion.insert(
-          name: 'Nexuleta Clásica',
-          price: 45,
-          category: 'Comida',
-          subcategory: const Value('Nexuleta Salada'),
-        ),
-      );
+      // --- COMIDAS ---
+      // Palomitas
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Palomitas Chicas',
+        price: 45,
+        category: 'Comidas',
+        subcategory: const Value('Palomitas'),
+      ));
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Palomitas Grandes',
+        price: 75,
+        category: 'Comidas',
+        subcategory: const Value('Palomitas'),
+      ));
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Palomitas Jumbo Prime',
+        price: 100,
+        category: 'Comidas',
+        subcategory: const Value('Palomitas'),
+      ));
 
-      batch.insert(
-        products,
-        ProductsCompanion.insert(
-          name: 'Frappé Oreo',
-          price: 65,
-          category: 'Bebida',
-          subcategory: const Value('Frappé'),
-        ),
-      );
+      // Mini Hot Cakes
+      batch.insert(products, ProductsCompanion.insert(
+        name: '12 Mini Hot Cakes',
+        price: 85,
+        category: 'Comidas',
+        subcategory: const Value('Mini Hot Cakes'),
+      ));
+      batch.insert(products, ProductsCompanion.insert(
+        name: '24 Mini Hot Cakes',
+        price: 145,
+        category: 'Comidas',
+        subcategory: const Value('Mini Hot Cakes'),
+      ));
 
-      batch.insert(
-        products,
-        ProductsCompanion.insert(
-          name: 'Pizza Individual',
-          price: 50,
-          category: 'Comida',
-          subcategory: const Value('Pizza'),
-        ),
-      );
+      // Nexuletas (NUEVO)
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Nexuleta (1 pza)',
+        price: 40,
+        category: 'Comidas',
+        subcategory: const Value('Nexuletas'),
+        description: const Value('Banderilla con toppings a elegir'),
+      ));
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Nexuletas (2 pzas)',
+        price: 80,
+        category: 'Comidas',
+        subcategory: const Value('Nexuletas'),
+        description: const Value('2 Banderillas con toppings a elegir'),
+      ));
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Nexuletas (3 pzas)',
+        price: 120,
+        category: 'Comidas',
+        subcategory: const Value('Nexuletas'),
+        description: const Value('3 Banderillas con toppings a elegir'),
+      ));
 
-      batch.insert(
-        products,
-        ProductsCompanion.insert(
-          name: 'Combo Gamer',
-          price: 120,
-          category: 'Comida',
-          subcategory: const Value('Combo'),
-          description: const Value('Palomitas + Refresco + Dulce'),
-        ),
-      );
+      // --- COMBOS ---
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Pa k te despiertes (12 pcs)',
+        price: 105,
+        category: 'Combos',
+        subcategory: const Value('Combo'),
+        description: const Value('12 Mini hot cakes + Café Americano'),
+      ));
+      batch.insert(products, ProductsCompanion.insert(
+        name: 'Pa k te despiertes (24 pcs)',
+        price: 145,
+        category: 'Combos',
+        subcategory: const Value('Combo'),
+        description: const Value('24 Mini hot cakes + Café Americano'),
+      ));
     });
   }
 }

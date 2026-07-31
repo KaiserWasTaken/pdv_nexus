@@ -57,6 +57,8 @@ class Rentals extends Table {
   TextColumn get consoleName => text()(); // "Mesa 1", "Xbox A"
   DateTimeColumn get startTime => dateTime()();
   DateTimeColumn get endTime => dateTime().nullable()(); // null = Jugando
+  DateTimeColumn get expectedEndTime => dateTime().nullable()(); // ✅ NUEVO: Para alarmas
+  IntColumn get extraControllers => integer().withDefault(const Constant(0))(); // ✅ NUEVO: Cobro extra
   RealColumn get totalCost => real().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
 }
@@ -67,6 +69,8 @@ class OrderItems extends Table {
   TextColumn get productName => text()();
   RealColumn get priceAtSale => real()();
   IntColumn get quantity => integer().withDefault(const Constant(1))();
+  TextColumn get category => text().nullable()(); // ✅ NUEVO: Para reportes
+  IntColumn get reportId => integer().nullable().references(DailyReports, #id)(); // ✅ NUEVO: Cierre de día
 
   // Modificadores aplicados (JSON string: ["Extra Tapioca", "Sin Azúcar"])
   TextColumn get modifiers => text().nullable()();
@@ -75,7 +79,7 @@ class OrderItems extends Table {
   TextColumn get status => text().withDefault(const Constant('pendiente'))();
 
   // Fecha exacta para saber qué se vendió hoy
-  DateTimeColumn get orderDate => dateTime().withDefault(currentDate)();
+  DateTimeColumn get orderDate => dateTime().withDefault(currentDateAndTime)();
 }
 
 // --- 6. REPORTES DIARIOS (Historial) ---

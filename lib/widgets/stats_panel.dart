@@ -9,17 +9,16 @@ class StatsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     const nexusYellow = Color(0xFFFFDE00);
     const nexusBlue = Color(0xFF00187A);
-    const nexusRed = Color(0xFFE62117);
 
     final db = context.read<AppDatabase>();
 
-    return FutureBuilder<Map<String, dynamic>>(
-      future: db.orderDao.getTodayStats(),
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: db.orderDao.watchTodayStats(),
       builder: (context, snapshot) {
         // Estado de carga
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: nexusYellow),
+            child: CircularProgressIndicator(color: Color(0xFFFFDE00)),
           );
         }
 
@@ -37,8 +36,6 @@ class StatsPanel extends StatelessWidget {
         final stats = snapshot.data ?? {};
         final totalSales = stats['totalSales'] as double? ?? 0.0;
         final totalItems = stats['totalItems'] as int? ?? 0;
-        final pendingOrders = stats['pendingOrders'] as int? ?? 0;
-        final deliveredOrders = stats['deliveredOrders'] as int? ?? 0;
 
         return Container(
           padding: const EdgeInsets.all(12), // Reducido de 16 a 12
@@ -75,7 +72,7 @@ class StatsPanel extends StatelessWidget {
 
               const SizedBox(height: 12), // Reducido de 20 a 12
 
-              // GRID DE STATS
+              // GRID DE STATS (SÓLO PRINCIPALES)
               Row(
                 children: [
                   // TOTAL VENDIDO
@@ -96,33 +93,6 @@ class StatsPanel extends StatelessWidget {
                       label: "Items Vendidos",
                       value: "$totalItems",
                       color: nexusYellow,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8), // Reducido de 12 a 8
-
-              Row(
-                children: [
-                  // PENDIENTES
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.pending_actions,
-                      label: "Pendientes",
-                      value: "$pendingOrders",
-                      color: nexusRed,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // ENTREGADOS
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.check_circle,
-                      label: "Entregados",
-                      value: "$deliveredOrders",
-                      color: Colors.green,
                     ),
                   ),
                 ],
@@ -164,12 +134,15 @@ class _StatCard extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           const SizedBox(height: 4),

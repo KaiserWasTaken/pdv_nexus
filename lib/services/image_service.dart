@@ -129,29 +129,31 @@ class ImageService {
             'Seleccionar imagen',
             style: TextStyle(color: Colors.white),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // OPCIÓN: CÁMARA
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: nexusYellow, size: 32),
-                title: const Text(
-                  'Tomar foto',
-                  style: TextStyle(color: Colors.white),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // OPCIÓN: CÁMARA
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: nexusYellow, size: 32),
+                  title: const Text(
+                    'Tomar foto',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
                 ),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-              const Divider(color: Colors.white24),
-              // OPCIÓN: GALERÍA
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: nexusYellow, size: 32),
-                title: const Text(
-                  'Elegir de galería',
-                  style: TextStyle(color: Colors.white),
+                const Divider(color: Colors.white24),
+                // OPCIÓN: GALERÍA
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: nexusYellow, size: 32),
+                  title: const Text(
+                    'Elegir de galería',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
                 ),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(

@@ -710,6 +710,30 @@ class $RentalsTable extends Rentals with TableInfo<$RentalsTable, Rental> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _expectedEndTimeMeta = const VerificationMeta(
+    'expectedEndTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expectedEndTime =
+      GeneratedColumn<DateTime>(
+        'expected_end_time',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _extraControllersMeta = const VerificationMeta(
+    'extraControllers',
+  );
+  @override
+  late final GeneratedColumn<int> extraControllers = GeneratedColumn<int>(
+    'extra_controllers',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _totalCostMeta = const VerificationMeta(
     'totalCost',
   );
@@ -742,6 +766,8 @@ class $RentalsTable extends Rentals with TableInfo<$RentalsTable, Rental> {
     consoleName,
     startTime,
     endTime,
+    expectedEndTime,
+    extraControllers,
     totalCost,
     isCompleted,
   ];
@@ -785,6 +811,24 @@ class $RentalsTable extends Rentals with TableInfo<$RentalsTable, Rental> {
         endTime.isAcceptableOrUnknown(data['end_time']!, _endTimeMeta),
       );
     }
+    if (data.containsKey('expected_end_time')) {
+      context.handle(
+        _expectedEndTimeMeta,
+        expectedEndTime.isAcceptableOrUnknown(
+          data['expected_end_time']!,
+          _expectedEndTimeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('extra_controllers')) {
+      context.handle(
+        _extraControllersMeta,
+        extraControllers.isAcceptableOrUnknown(
+          data['extra_controllers']!,
+          _extraControllersMeta,
+        ),
+      );
+    }
     if (data.containsKey('total_cost')) {
       context.handle(
         _totalCostMeta,
@@ -825,6 +869,14 @@ class $RentalsTable extends Rentals with TableInfo<$RentalsTable, Rental> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}end_time'],
       ),
+      expectedEndTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expected_end_time'],
+      ),
+      extraControllers: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}extra_controllers'],
+      )!,
       totalCost: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}total_cost'],
@@ -847,6 +899,8 @@ class Rental extends DataClass implements Insertable<Rental> {
   final String consoleName;
   final DateTime startTime;
   final DateTime? endTime;
+  final DateTime? expectedEndTime;
+  final int extraControllers;
   final double? totalCost;
   final bool isCompleted;
   const Rental({
@@ -854,6 +908,8 @@ class Rental extends DataClass implements Insertable<Rental> {
     required this.consoleName,
     required this.startTime,
     this.endTime,
+    this.expectedEndTime,
+    required this.extraControllers,
     this.totalCost,
     required this.isCompleted,
   });
@@ -866,6 +922,10 @@ class Rental extends DataClass implements Insertable<Rental> {
     if (!nullToAbsent || endTime != null) {
       map['end_time'] = Variable<DateTime>(endTime);
     }
+    if (!nullToAbsent || expectedEndTime != null) {
+      map['expected_end_time'] = Variable<DateTime>(expectedEndTime);
+    }
+    map['extra_controllers'] = Variable<int>(extraControllers);
     if (!nullToAbsent || totalCost != null) {
       map['total_cost'] = Variable<double>(totalCost);
     }
@@ -881,6 +941,10 @@ class Rental extends DataClass implements Insertable<Rental> {
       endTime: endTime == null && nullToAbsent
           ? const Value.absent()
           : Value(endTime),
+      expectedEndTime: expectedEndTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedEndTime),
+      extraControllers: Value(extraControllers),
       totalCost: totalCost == null && nullToAbsent
           ? const Value.absent()
           : Value(totalCost),
@@ -898,6 +962,8 @@ class Rental extends DataClass implements Insertable<Rental> {
       consoleName: serializer.fromJson<String>(json['consoleName']),
       startTime: serializer.fromJson<DateTime>(json['startTime']),
       endTime: serializer.fromJson<DateTime?>(json['endTime']),
+      expectedEndTime: serializer.fromJson<DateTime?>(json['expectedEndTime']),
+      extraControllers: serializer.fromJson<int>(json['extraControllers']),
       totalCost: serializer.fromJson<double?>(json['totalCost']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
     );
@@ -910,6 +976,8 @@ class Rental extends DataClass implements Insertable<Rental> {
       'consoleName': serializer.toJson<String>(consoleName),
       'startTime': serializer.toJson<DateTime>(startTime),
       'endTime': serializer.toJson<DateTime?>(endTime),
+      'expectedEndTime': serializer.toJson<DateTime?>(expectedEndTime),
+      'extraControllers': serializer.toJson<int>(extraControllers),
       'totalCost': serializer.toJson<double?>(totalCost),
       'isCompleted': serializer.toJson<bool>(isCompleted),
     };
@@ -920,6 +988,8 @@ class Rental extends DataClass implements Insertable<Rental> {
     String? consoleName,
     DateTime? startTime,
     Value<DateTime?> endTime = const Value.absent(),
+    Value<DateTime?> expectedEndTime = const Value.absent(),
+    int? extraControllers,
     Value<double?> totalCost = const Value.absent(),
     bool? isCompleted,
   }) => Rental(
@@ -927,6 +997,10 @@ class Rental extends DataClass implements Insertable<Rental> {
     consoleName: consoleName ?? this.consoleName,
     startTime: startTime ?? this.startTime,
     endTime: endTime.present ? endTime.value : this.endTime,
+    expectedEndTime: expectedEndTime.present
+        ? expectedEndTime.value
+        : this.expectedEndTime,
+    extraControllers: extraControllers ?? this.extraControllers,
     totalCost: totalCost.present ? totalCost.value : this.totalCost,
     isCompleted: isCompleted ?? this.isCompleted,
   );
@@ -938,6 +1012,12 @@ class Rental extends DataClass implements Insertable<Rental> {
           : this.consoleName,
       startTime: data.startTime.present ? data.startTime.value : this.startTime,
       endTime: data.endTime.present ? data.endTime.value : this.endTime,
+      expectedEndTime: data.expectedEndTime.present
+          ? data.expectedEndTime.value
+          : this.expectedEndTime,
+      extraControllers: data.extraControllers.present
+          ? data.extraControllers.value
+          : this.extraControllers,
       totalCost: data.totalCost.present ? data.totalCost.value : this.totalCost,
       isCompleted: data.isCompleted.present
           ? data.isCompleted.value
@@ -952,6 +1032,8 @@ class Rental extends DataClass implements Insertable<Rental> {
           ..write('consoleName: $consoleName, ')
           ..write('startTime: $startTime, ')
           ..write('endTime: $endTime, ')
+          ..write('expectedEndTime: $expectedEndTime, ')
+          ..write('extraControllers: $extraControllers, ')
           ..write('totalCost: $totalCost, ')
           ..write('isCompleted: $isCompleted')
           ..write(')'))
@@ -959,8 +1041,16 @@ class Rental extends DataClass implements Insertable<Rental> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, consoleName, startTime, endTime, totalCost, isCompleted);
+  int get hashCode => Object.hash(
+    id,
+    consoleName,
+    startTime,
+    endTime,
+    expectedEndTime,
+    extraControllers,
+    totalCost,
+    isCompleted,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -969,6 +1059,8 @@ class Rental extends DataClass implements Insertable<Rental> {
           other.consoleName == this.consoleName &&
           other.startTime == this.startTime &&
           other.endTime == this.endTime &&
+          other.expectedEndTime == this.expectedEndTime &&
+          other.extraControllers == this.extraControllers &&
           other.totalCost == this.totalCost &&
           other.isCompleted == this.isCompleted);
 }
@@ -978,6 +1070,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
   final Value<String> consoleName;
   final Value<DateTime> startTime;
   final Value<DateTime?> endTime;
+  final Value<DateTime?> expectedEndTime;
+  final Value<int> extraControllers;
   final Value<double?> totalCost;
   final Value<bool> isCompleted;
   const RentalsCompanion({
@@ -985,6 +1079,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
     this.consoleName = const Value.absent(),
     this.startTime = const Value.absent(),
     this.endTime = const Value.absent(),
+    this.expectedEndTime = const Value.absent(),
+    this.extraControllers = const Value.absent(),
     this.totalCost = const Value.absent(),
     this.isCompleted = const Value.absent(),
   });
@@ -993,6 +1089,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
     required String consoleName,
     required DateTime startTime,
     this.endTime = const Value.absent(),
+    this.expectedEndTime = const Value.absent(),
+    this.extraControllers = const Value.absent(),
     this.totalCost = const Value.absent(),
     this.isCompleted = const Value.absent(),
   }) : consoleName = Value(consoleName),
@@ -1002,6 +1100,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
     Expression<String>? consoleName,
     Expression<DateTime>? startTime,
     Expression<DateTime>? endTime,
+    Expression<DateTime>? expectedEndTime,
+    Expression<int>? extraControllers,
     Expression<double>? totalCost,
     Expression<bool>? isCompleted,
   }) {
@@ -1010,6 +1110,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
       if (consoleName != null) 'console_name': consoleName,
       if (startTime != null) 'start_time': startTime,
       if (endTime != null) 'end_time': endTime,
+      if (expectedEndTime != null) 'expected_end_time': expectedEndTime,
+      if (extraControllers != null) 'extra_controllers': extraControllers,
       if (totalCost != null) 'total_cost': totalCost,
       if (isCompleted != null) 'is_completed': isCompleted,
     });
@@ -1020,6 +1122,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
     Value<String>? consoleName,
     Value<DateTime>? startTime,
     Value<DateTime?>? endTime,
+    Value<DateTime?>? expectedEndTime,
+    Value<int>? extraControllers,
     Value<double?>? totalCost,
     Value<bool>? isCompleted,
   }) {
@@ -1028,6 +1132,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
       consoleName: consoleName ?? this.consoleName,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
+      expectedEndTime: expectedEndTime ?? this.expectedEndTime,
+      extraControllers: extraControllers ?? this.extraControllers,
       totalCost: totalCost ?? this.totalCost,
       isCompleted: isCompleted ?? this.isCompleted,
     );
@@ -1048,6 +1154,12 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
     if (endTime.present) {
       map['end_time'] = Variable<DateTime>(endTime.value);
     }
+    if (expectedEndTime.present) {
+      map['expected_end_time'] = Variable<DateTime>(expectedEndTime.value);
+    }
+    if (extraControllers.present) {
+      map['extra_controllers'] = Variable<int>(extraControllers.value);
+    }
     if (totalCost.present) {
       map['total_cost'] = Variable<double>(totalCost.value);
     }
@@ -1064,6 +1176,8 @@ class RentalsCompanion extends UpdateCompanion<Rental> {
           ..write('consoleName: $consoleName, ')
           ..write('startTime: $startTime, ')
           ..write('endTime: $endTime, ')
+          ..write('expectedEndTime: $expectedEndTime, ')
+          ..write('extraControllers: $extraControllers, ')
           ..write('totalCost: $totalCost, ')
           ..write('isCompleted: $isCompleted')
           ..write(')'))
@@ -1475,6 +1589,31 @@ class $OrderItemsTable extends OrderItems
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reportIdMeta = const VerificationMeta(
+    'reportId',
+  );
+  @override
+  late final GeneratedColumn<int> reportId = GeneratedColumn<int>(
+    'report_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES daily_reports (id)',
+    ),
+  );
   static const VerificationMeta _modifiersMeta = const VerificationMeta(
     'modifiers',
   );
@@ -1506,7 +1645,7 @@ class $OrderItemsTable extends OrderItems
     false,
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
-    defaultValue: currentDate,
+    defaultValue: currentDateAndTime,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -1514,6 +1653,8 @@ class $OrderItemsTable extends OrderItems
     productName,
     priceAtSale,
     quantity,
+    category,
+    reportId,
     modifiers,
     status,
     orderDate,
@@ -1561,6 +1702,18 @@ class $OrderItemsTable extends OrderItems
         quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
       );
     }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    }
+    if (data.containsKey('report_id')) {
+      context.handle(
+        _reportIdMeta,
+        reportId.isAcceptableOrUnknown(data['report_id']!, _reportIdMeta),
+      );
+    }
     if (data.containsKey('modifiers')) {
       context.handle(
         _modifiersMeta,
@@ -1604,6 +1757,14 @@ class $OrderItemsTable extends OrderItems
         DriftSqlType.int,
         data['${effectivePrefix}quantity'],
       )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      ),
+      reportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}report_id'],
+      ),
       modifiers: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}modifiers'],
@@ -1630,6 +1791,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
   final String productName;
   final double priceAtSale;
   final int quantity;
+  final String? category;
+  final int? reportId;
   final String? modifiers;
   final String status;
   final DateTime orderDate;
@@ -1638,6 +1801,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     required this.productName,
     required this.priceAtSale,
     required this.quantity,
+    this.category,
+    this.reportId,
     this.modifiers,
     required this.status,
     required this.orderDate,
@@ -1649,6 +1814,12 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     map['product_name'] = Variable<String>(productName);
     map['price_at_sale'] = Variable<double>(priceAtSale);
     map['quantity'] = Variable<int>(quantity);
+    if (!nullToAbsent || category != null) {
+      map['category'] = Variable<String>(category);
+    }
+    if (!nullToAbsent || reportId != null) {
+      map['report_id'] = Variable<int>(reportId);
+    }
     if (!nullToAbsent || modifiers != null) {
       map['modifiers'] = Variable<String>(modifiers);
     }
@@ -1663,6 +1834,12 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       productName: Value(productName),
       priceAtSale: Value(priceAtSale),
       quantity: Value(quantity),
+      category: category == null && nullToAbsent
+          ? const Value.absent()
+          : Value(category),
+      reportId: reportId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reportId),
       modifiers: modifiers == null && nullToAbsent
           ? const Value.absent()
           : Value(modifiers),
@@ -1681,6 +1858,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       productName: serializer.fromJson<String>(json['productName']),
       priceAtSale: serializer.fromJson<double>(json['priceAtSale']),
       quantity: serializer.fromJson<int>(json['quantity']),
+      category: serializer.fromJson<String?>(json['category']),
+      reportId: serializer.fromJson<int?>(json['reportId']),
       modifiers: serializer.fromJson<String?>(json['modifiers']),
       status: serializer.fromJson<String>(json['status']),
       orderDate: serializer.fromJson<DateTime>(json['orderDate']),
@@ -1694,6 +1873,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       'productName': serializer.toJson<String>(productName),
       'priceAtSale': serializer.toJson<double>(priceAtSale),
       'quantity': serializer.toJson<int>(quantity),
+      'category': serializer.toJson<String?>(category),
+      'reportId': serializer.toJson<int?>(reportId),
       'modifiers': serializer.toJson<String?>(modifiers),
       'status': serializer.toJson<String>(status),
       'orderDate': serializer.toJson<DateTime>(orderDate),
@@ -1705,6 +1886,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     String? productName,
     double? priceAtSale,
     int? quantity,
+    Value<String?> category = const Value.absent(),
+    Value<int?> reportId = const Value.absent(),
     Value<String?> modifiers = const Value.absent(),
     String? status,
     DateTime? orderDate,
@@ -1713,6 +1896,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     productName: productName ?? this.productName,
     priceAtSale: priceAtSale ?? this.priceAtSale,
     quantity: quantity ?? this.quantity,
+    category: category.present ? category.value : this.category,
+    reportId: reportId.present ? reportId.value : this.reportId,
     modifiers: modifiers.present ? modifiers.value : this.modifiers,
     status: status ?? this.status,
     orderDate: orderDate ?? this.orderDate,
@@ -1727,6 +1912,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           ? data.priceAtSale.value
           : this.priceAtSale,
       quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      category: data.category.present ? data.category.value : this.category,
+      reportId: data.reportId.present ? data.reportId.value : this.reportId,
       modifiers: data.modifiers.present ? data.modifiers.value : this.modifiers,
       status: data.status.present ? data.status.value : this.status,
       orderDate: data.orderDate.present ? data.orderDate.value : this.orderDate,
@@ -1740,6 +1927,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           ..write('productName: $productName, ')
           ..write('priceAtSale: $priceAtSale, ')
           ..write('quantity: $quantity, ')
+          ..write('category: $category, ')
+          ..write('reportId: $reportId, ')
           ..write('modifiers: $modifiers, ')
           ..write('status: $status, ')
           ..write('orderDate: $orderDate')
@@ -1753,6 +1942,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     productName,
     priceAtSale,
     quantity,
+    category,
+    reportId,
     modifiers,
     status,
     orderDate,
@@ -1765,6 +1956,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           other.productName == this.productName &&
           other.priceAtSale == this.priceAtSale &&
           other.quantity == this.quantity &&
+          other.category == this.category &&
+          other.reportId == this.reportId &&
           other.modifiers == this.modifiers &&
           other.status == this.status &&
           other.orderDate == this.orderDate);
@@ -1775,6 +1968,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
   final Value<String> productName;
   final Value<double> priceAtSale;
   final Value<int> quantity;
+  final Value<String?> category;
+  final Value<int?> reportId;
   final Value<String?> modifiers;
   final Value<String> status;
   final Value<DateTime> orderDate;
@@ -1783,6 +1978,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     this.productName = const Value.absent(),
     this.priceAtSale = const Value.absent(),
     this.quantity = const Value.absent(),
+    this.category = const Value.absent(),
+    this.reportId = const Value.absent(),
     this.modifiers = const Value.absent(),
     this.status = const Value.absent(),
     this.orderDate = const Value.absent(),
@@ -1792,6 +1989,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     required String productName,
     required double priceAtSale,
     this.quantity = const Value.absent(),
+    this.category = const Value.absent(),
+    this.reportId = const Value.absent(),
     this.modifiers = const Value.absent(),
     this.status = const Value.absent(),
     this.orderDate = const Value.absent(),
@@ -1802,6 +2001,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     Expression<String>? productName,
     Expression<double>? priceAtSale,
     Expression<int>? quantity,
+    Expression<String>? category,
+    Expression<int>? reportId,
     Expression<String>? modifiers,
     Expression<String>? status,
     Expression<DateTime>? orderDate,
@@ -1811,6 +2012,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
       if (productName != null) 'product_name': productName,
       if (priceAtSale != null) 'price_at_sale': priceAtSale,
       if (quantity != null) 'quantity': quantity,
+      if (category != null) 'category': category,
+      if (reportId != null) 'report_id': reportId,
       if (modifiers != null) 'modifiers': modifiers,
       if (status != null) 'status': status,
       if (orderDate != null) 'order_date': orderDate,
@@ -1822,6 +2025,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     Value<String>? productName,
     Value<double>? priceAtSale,
     Value<int>? quantity,
+    Value<String?>? category,
+    Value<int?>? reportId,
     Value<String?>? modifiers,
     Value<String>? status,
     Value<DateTime>? orderDate,
@@ -1831,6 +2036,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
       productName: productName ?? this.productName,
       priceAtSale: priceAtSale ?? this.priceAtSale,
       quantity: quantity ?? this.quantity,
+      category: category ?? this.category,
+      reportId: reportId ?? this.reportId,
       modifiers: modifiers ?? this.modifiers,
       status: status ?? this.status,
       orderDate: orderDate ?? this.orderDate,
@@ -1852,6 +2059,12 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     if (quantity.present) {
       map['quantity'] = Variable<int>(quantity.value);
     }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (reportId.present) {
+      map['report_id'] = Variable<int>(reportId.value);
+    }
     if (modifiers.present) {
       map['modifiers'] = Variable<String>(modifiers.value);
     }
@@ -1871,6 +2084,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
           ..write('productName: $productName, ')
           ..write('priceAtSale: $priceAtSale, ')
           ..write('quantity: $quantity, ')
+          ..write('category: $category, ')
+          ..write('reportId: $reportId, ')
           ..write('modifiers: $modifiers, ')
           ..write('status: $status, ')
           ..write('orderDate: $orderDate')
@@ -2555,6 +2770,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final OrderDao orderDao = OrderDao(this as AppDatabase);
   late final ProductDao productDao = ProductDao(this as AppDatabase);
+  late final RentalDao rentalDao = RentalDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2900,6 +3116,8 @@ typedef $$RentalsTableCreateCompanionBuilder =
       required String consoleName,
       required DateTime startTime,
       Value<DateTime?> endTime,
+      Value<DateTime?> expectedEndTime,
+      Value<int> extraControllers,
       Value<double?> totalCost,
       Value<bool> isCompleted,
     });
@@ -2909,6 +3127,8 @@ typedef $$RentalsTableUpdateCompanionBuilder =
       Value<String> consoleName,
       Value<DateTime> startTime,
       Value<DateTime?> endTime,
+      Value<DateTime?> expectedEndTime,
+      Value<int> extraControllers,
       Value<double?> totalCost,
       Value<bool> isCompleted,
     });
@@ -2939,6 +3159,16 @@ class $$RentalsTableFilterComposer
 
   ColumnFilters<DateTime> get endTime => $composableBuilder(
     column: $table.endTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expectedEndTime => $composableBuilder(
+    column: $table.expectedEndTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get extraControllers => $composableBuilder(
+    column: $table.extraControllers,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2982,6 +3212,16 @@ class $$RentalsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get expectedEndTime => $composableBuilder(
+    column: $table.expectedEndTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get extraControllers => $composableBuilder(
+    column: $table.extraControllers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get totalCost => $composableBuilder(
     column: $table.totalCost,
     builder: (column) => ColumnOrderings(column),
@@ -3015,6 +3255,16 @@ class $$RentalsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get endTime =>
       $composableBuilder(column: $table.endTime, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expectedEndTime => $composableBuilder(
+    column: $table.expectedEndTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get extraControllers => $composableBuilder(
+    column: $table.extraControllers,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<double> get totalCost =>
       $composableBuilder(column: $table.totalCost, builder: (column) => column);
@@ -3057,6 +3307,8 @@ class $$RentalsTableTableManager
                 Value<String> consoleName = const Value.absent(),
                 Value<DateTime> startTime = const Value.absent(),
                 Value<DateTime?> endTime = const Value.absent(),
+                Value<DateTime?> expectedEndTime = const Value.absent(),
+                Value<int> extraControllers = const Value.absent(),
                 Value<double?> totalCost = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
               }) => RentalsCompanion(
@@ -3064,6 +3316,8 @@ class $$RentalsTableTableManager
                 consoleName: consoleName,
                 startTime: startTime,
                 endTime: endTime,
+                expectedEndTime: expectedEndTime,
+                extraControllers: extraControllers,
                 totalCost: totalCost,
                 isCompleted: isCompleted,
               ),
@@ -3073,6 +3327,8 @@ class $$RentalsTableTableManager
                 required String consoleName,
                 required DateTime startTime,
                 Value<DateTime?> endTime = const Value.absent(),
+                Value<DateTime?> expectedEndTime = const Value.absent(),
+                Value<int> extraControllers = const Value.absent(),
                 Value<double?> totalCost = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
               }) => RentalsCompanion.insert(
@@ -3080,6 +3336,8 @@ class $$RentalsTableTableManager
                 consoleName: consoleName,
                 startTime: startTime,
                 endTime: endTime,
+                expectedEndTime: expectedEndTime,
+                extraControllers: extraControllers,
                 totalCost: totalCost,
                 isCompleted: isCompleted,
               ),
@@ -3122,6 +3380,29 @@ typedef $$DailyReportsTableUpdateCompanionBuilder =
       Value<bool> isSynced,
     });
 
+final class $$DailyReportsTableReferences
+    extends BaseReferences<_$AppDatabase, $DailyReportsTable, DailyReport> {
+  $$DailyReportsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$OrderItemsTable, List<OrderItem>>
+  _orderItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.orderItems,
+    aliasName: 'daily_reports__id__order_items__report_id',
+  );
+
+  $$OrderItemsTableProcessedTableManager get orderItemsRefs {
+    final manager = $$OrderItemsTableTableManager(
+      $_db,
+      $_db.orderItems,
+    ).filter((f) => f.reportId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_orderItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
 class $$DailyReportsTableFilterComposer
     extends Composer<_$AppDatabase, $DailyReportsTable> {
   $$DailyReportsTableFilterComposer({
@@ -3155,6 +3436,31 @@ class $$DailyReportsTableFilterComposer
     column: $table.isSynced,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> orderItemsRefs(
+    Expression<bool> Function($$OrderItemsTableFilterComposer f) f,
+  ) {
+    final $$OrderItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.orderItems,
+      getReferencedColumn: (t) => t.reportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrderItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.orderItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DailyReportsTableOrderingComposer
@@ -3215,6 +3521,31 @@ class $$DailyReportsTableAnnotationComposer
 
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  Expression<T> orderItemsRefs<T extends Object>(
+    Expression<T> Function($$OrderItemsTableAnnotationComposer a) f,
+  ) {
+    final $$OrderItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.orderItems,
+      getReferencedColumn: (t) => t.reportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrderItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.orderItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DailyReportsTableTableManager
@@ -3228,12 +3559,9 @@ class $$DailyReportsTableTableManager
           $$DailyReportsTableAnnotationComposer,
           $$DailyReportsTableCreateCompanionBuilder,
           $$DailyReportsTableUpdateCompanionBuilder,
-          (
-            DailyReport,
-            BaseReferences<_$AppDatabase, $DailyReportsTable, DailyReport>,
-          ),
+          (DailyReport, $$DailyReportsTableReferences),
           DailyReport,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool orderItemsRefs})
         > {
   $$DailyReportsTableTableManager(_$AppDatabase db, $DailyReportsTable table)
     : super(
@@ -3275,9 +3603,43 @@ class $$DailyReportsTableTableManager
                 isSynced: isSynced,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DailyReportsTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({orderItemsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (orderItemsRefs) db.orderItems],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (orderItemsRefs)
+                    await $_getPrefetchedData<
+                      DailyReport,
+                      $DailyReportsTable,
+                      OrderItem
+                    >(
+                      currentTable: table,
+                      referencedTable: $$DailyReportsTableReferences
+                          ._orderItemsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$DailyReportsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).orderItemsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.reportId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -3292,12 +3654,9 @@ typedef $$DailyReportsTableProcessedTableManager =
       $$DailyReportsTableAnnotationComposer,
       $$DailyReportsTableCreateCompanionBuilder,
       $$DailyReportsTableUpdateCompanionBuilder,
-      (
-        DailyReport,
-        BaseReferences<_$AppDatabase, $DailyReportsTable, DailyReport>,
-      ),
+      (DailyReport, $$DailyReportsTableReferences),
       DailyReport,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool orderItemsRefs})
     >;
 typedef $$OrderItemsTableCreateCompanionBuilder =
     OrderItemsCompanion Function({
@@ -3305,6 +3664,8 @@ typedef $$OrderItemsTableCreateCompanionBuilder =
       required String productName,
       required double priceAtSale,
       Value<int> quantity,
+      Value<String?> category,
+      Value<int?> reportId,
       Value<String?> modifiers,
       Value<String> status,
       Value<DateTime> orderDate,
@@ -3315,10 +3676,34 @@ typedef $$OrderItemsTableUpdateCompanionBuilder =
       Value<String> productName,
       Value<double> priceAtSale,
       Value<int> quantity,
+      Value<String?> category,
+      Value<int?> reportId,
       Value<String?> modifiers,
       Value<String> status,
       Value<DateTime> orderDate,
     });
+
+final class $$OrderItemsTableReferences
+    extends BaseReferences<_$AppDatabase, $OrderItemsTable, OrderItem> {
+  $$OrderItemsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $DailyReportsTable _reportIdTable(_$AppDatabase db) =>
+      db.dailyReports.createAlias('order_items__report_id__daily_reports__id');
+
+  $$DailyReportsTableProcessedTableManager? get reportId {
+    final $_column = $_itemColumn<int>('report_id');
+    if ($_column == null) return null;
+    final manager = $$DailyReportsTableTableManager(
+      $_db,
+      $_db.dailyReports,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_reportIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
 
 class $$OrderItemsTableFilterComposer
     extends Composer<_$AppDatabase, $OrderItemsTable> {
@@ -3349,6 +3734,11 @@ class $$OrderItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get modifiers => $composableBuilder(
     column: $table.modifiers,
     builder: (column) => ColumnFilters(column),
@@ -3363,6 +3753,29 @@ class $$OrderItemsTableFilterComposer
     column: $table.orderDate,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$DailyReportsTableFilterComposer get reportId {
+    final $$DailyReportsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reportId,
+      referencedTable: $db.dailyReports,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DailyReportsTableFilterComposer(
+            $db: $db,
+            $table: $db.dailyReports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$OrderItemsTableOrderingComposer
@@ -3394,6 +3807,11 @@ class $$OrderItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get modifiers => $composableBuilder(
     column: $table.modifiers,
     builder: (column) => ColumnOrderings(column),
@@ -3408,6 +3826,29 @@ class $$OrderItemsTableOrderingComposer
     column: $table.orderDate,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$DailyReportsTableOrderingComposer get reportId {
+    final $$DailyReportsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reportId,
+      referencedTable: $db.dailyReports,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DailyReportsTableOrderingComposer(
+            $db: $db,
+            $table: $db.dailyReports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$OrderItemsTableAnnotationComposer
@@ -3435,6 +3876,9 @@ class $$OrderItemsTableAnnotationComposer
   GeneratedColumn<int> get quantity =>
       $composableBuilder(column: $table.quantity, builder: (column) => column);
 
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
   GeneratedColumn<String> get modifiers =>
       $composableBuilder(column: $table.modifiers, builder: (column) => column);
 
@@ -3443,6 +3887,29 @@ class $$OrderItemsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get orderDate =>
       $composableBuilder(column: $table.orderDate, builder: (column) => column);
+
+  $$DailyReportsTableAnnotationComposer get reportId {
+    final $$DailyReportsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reportId,
+      referencedTable: $db.dailyReports,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DailyReportsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.dailyReports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$OrderItemsTableTableManager
@@ -3456,12 +3923,9 @@ class $$OrderItemsTableTableManager
           $$OrderItemsTableAnnotationComposer,
           $$OrderItemsTableCreateCompanionBuilder,
           $$OrderItemsTableUpdateCompanionBuilder,
-          (
-            OrderItem,
-            BaseReferences<_$AppDatabase, $OrderItemsTable, OrderItem>,
-          ),
+          (OrderItem, $$OrderItemsTableReferences),
           OrderItem,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool reportId})
         > {
   $$OrderItemsTableTableManager(_$AppDatabase db, $OrderItemsTable table)
     : super(
@@ -3480,6 +3944,8 @@ class $$OrderItemsTableTableManager
                 Value<String> productName = const Value.absent(),
                 Value<double> priceAtSale = const Value.absent(),
                 Value<int> quantity = const Value.absent(),
+                Value<String?> category = const Value.absent(),
+                Value<int?> reportId = const Value.absent(),
                 Value<String?> modifiers = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<DateTime> orderDate = const Value.absent(),
@@ -3488,6 +3954,8 @@ class $$OrderItemsTableTableManager
                 productName: productName,
                 priceAtSale: priceAtSale,
                 quantity: quantity,
+                category: category,
+                reportId: reportId,
                 modifiers: modifiers,
                 status: status,
                 orderDate: orderDate,
@@ -3498,6 +3966,8 @@ class $$OrderItemsTableTableManager
                 required String productName,
                 required double priceAtSale,
                 Value<int> quantity = const Value.absent(),
+                Value<String?> category = const Value.absent(),
+                Value<int?> reportId = const Value.absent(),
                 Value<String?> modifiers = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<DateTime> orderDate = const Value.absent(),
@@ -3506,14 +3976,61 @@ class $$OrderItemsTableTableManager
                 productName: productName,
                 priceAtSale: priceAtSale,
                 quantity: quantity,
+                category: category,
+                reportId: reportId,
                 modifiers: modifiers,
                 status: status,
                 orderDate: orderDate,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$OrderItemsTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({reportId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (reportId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.reportId,
+                                referencedTable: $$OrderItemsTableReferences
+                                    ._reportIdTable(db),
+                                referencedColumn: $$OrderItemsTableReferences
+                                    ._reportIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -3528,9 +4045,9 @@ typedef $$OrderItemsTableProcessedTableManager =
       $$OrderItemsTableAnnotationComposer,
       $$OrderItemsTableCreateCompanionBuilder,
       $$OrderItemsTableUpdateCompanionBuilder,
-      (OrderItem, BaseReferences<_$AppDatabase, $OrderItemsTable, OrderItem>),
+      (OrderItem, $$OrderItemsTableReferences),
       OrderItem,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool reportId})
     >;
 typedef $$PackageItemsTableCreateCompanionBuilder =
     PackageItemsCompanion Function({
@@ -3552,9 +4069,7 @@ final class $$PackageItemsTableReferences
   $$PackageItemsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $ProductsTable _packageIdTable(_$AppDatabase db) =>
-      db.products.createAlias(
-        $_aliasNameGenerator(db.packageItems.packageId, db.products.id),
-      );
+      db.products.createAlias('package_items__package_id__products__id');
 
   $$ProductsTableProcessedTableManager get packageId {
     final $_column = $_itemColumn<int>('package_id')!;
@@ -3571,9 +4086,7 @@ final class $$PackageItemsTableReferences
   }
 
   static $ProductsTable _productIdTable(_$AppDatabase db) =>
-      db.products.createAlias(
-        $_aliasNameGenerator(db.packageItems.productId, db.products.id),
-      );
+      db.products.createAlias('package_items__product_id__products__id');
 
   $$ProductsTableProcessedTableManager get productId {
     final $_column = $_itemColumn<int>('product_id')!;

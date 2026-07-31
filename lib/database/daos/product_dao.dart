@@ -82,7 +82,7 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
       ProductsCompanion.insert(
         name: name,
         price: price,
-        category: 'Paquete',
+        category: 'Combos',
         description: Value(description),
         imagePath: Value(imagePath),
         productType: const Value('paquete'),
@@ -219,9 +219,9 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
       ..where((tbl) => tbl.isActive.equals(true)))
         .get();
 
-    final bebidas = allProducts.where((p) => p.category == 'Bebida').length;
-    final comidas = allProducts.where((p) => p.category == 'Comida').length;
-    final paquetes = allProducts.where((p) => p.productType == 'paquete').length;
+    final bebidas = allProducts.where((p) => p.category == 'Bebidas').length;
+    final comidas = allProducts.where((p) => p.category == 'Comidas').length;
+    final paquetes = allProducts.where((p) => p.category == 'Combos').length;
 
     return {
       'total': allProducts.length,

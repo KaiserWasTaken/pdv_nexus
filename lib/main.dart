@@ -3,6 +3,7 @@ import 'package:flutter/services.dart'; // ✅ Importar para SystemChrome
 import 'package:provider/provider.dart';
 import 'database/database.dart';
 import 'providers/cart_provider.dart';
+import 'providers/rental_provider.dart'; // ✅ NUEVO
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -15,17 +16,22 @@ void main() async {
     DeviceOrientation.landscapeLeft,
   ]);
 
+  final database = AppDatabase(); // Instancia única
+
   runApp(
     MultiProvider(
       providers: [
         // 1. La Base de Datos
-        Provider<AppDatabase>(
-          create: (context) => AppDatabase(),
-          dispose: (context, db) => db.close(),
-        ),
+        Provider<AppDatabase>.value(value: database),
+        
         // 2. El Carrito de Compras
         ChangeNotifierProvider(
           create: (context) => CartProvider(),
+        ),
+
+        // 3. Gestión de Rentas
+        ChangeNotifierProvider(
+          create: (context) => RentalProvider(database),
         ),
       ],
       child: const GamerCafeApp(),
@@ -52,12 +58,11 @@ class GamerCafeApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: nexusDarkBg,
 
-        colorScheme: const ColorScheme.dark(
+        colorScheme: ColorScheme.dark(
           primary: nexusYellow,
           onPrimary: nexusBlue,
           secondary: nexusRed,
           surface: nexusBlue,
-          background: nexusDarkBg,
           onSurface: Colors.white,
         ),
 

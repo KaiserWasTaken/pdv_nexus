@@ -108,7 +108,7 @@ class ProductManagementScreen extends StatelessWidget {
                       ),
                       _StatChip(
                         icon: Icons.card_giftcard,
-                        label: "Paquetes",
+                        label: "Combos",
                         value: "${stats['paquetes']}",
                         color: Colors.purple,
                       ),
@@ -341,7 +341,7 @@ class _ProductCard extends StatelessWidget {
               File(product.imagePath!),
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Icon(
-                product.category == 'Bebida'
+                product.category == 'Bebidas'
                     ? Icons.local_drink
                     : Icons.fastfood,
                 color: Colors.white70,
@@ -349,7 +349,7 @@ class _ProductCard extends StatelessWidget {
             ),
           )
               : Icon(
-            product.category == 'Bebida'
+            product.category == 'Bebidas'
                 ? Icons.local_drink
                 : Icons.fastfood,
             color: Colors.white70,

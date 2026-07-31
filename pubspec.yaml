@@ -33,6 +33,7 @@ dependencies:
   # ✅ Manejo de Imágenes (VERSIONES CORREGIDAS)
   image_picker: ^1.0.7
   image_cropper: ^11.0.0  # ✅ Actualizado de 5.0.1 a 6.0.0
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:

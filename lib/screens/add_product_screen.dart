@@ -20,30 +20,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final ImageService _imageService = ImageService();
 
   String _productType = 'simple';
-  String _selectedCategory = 'Bebida';
+  String _selectedCategory = 'Bebidas';
   String? _selectedSubcategory;
   File? _selectedImage; // ✅ NUEVO: Imagen seleccionada
 
   // Subcategorías por categoría
   final Map<String, List<String>> _subcategories = {
-    'Bebida': [
-      'Bubble Tea Base Agua',
-      'Bubble Tea Base Leche',
+    'Bebidas': [
+      'Bubble Tea',
+      'Chamoyada',
+      'Smoothie',
       'Soda Italiana',
       'Tisana',
       'Refresco',
       'Agua Embotellada',
       'Frappé',
     ],
-    'Comida': [
+    'Comidas': [
       'Mini Hot Cakes',
+      'Nexuletas',
       'Nexuleta Salada',
       'Nexuleta Dulce',
       'Nachos',
       'Palomitas',
       'Maruchan',
       'Pizza',
+    ],
+    'Combos': [
       'Combo',
+      'Paquete Especial',
     ],
   };
 
@@ -220,7 +225,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ),
                           ),
                           style: const TextStyle(color: Colors.white),
-                          items: ['Bebida', 'Comida'].map((category) {
+                          items: ['Bebidas', 'Comidas', 'Combos'].map((category) {
                             return DropdownMenuItem(
                               value: category,
                               child: Text(category),
