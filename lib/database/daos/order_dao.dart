@@ -11,14 +11,15 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
   // ========================================
   // 1. INSERTAR ORDEN COMPLETA
   // ========================================
-  Future<void> insertOrder(String productName, double price, int quantity, {String? category, DateTime? date}) async {
+  Future<void> insertOrder(String productName, double price, int quantity, {String? category, DateTime? date, String paymentMethod = 'Efectivo'}) async {
     await into(orderItems).insert(
       OrderItemsCompanion.insert(
         productName: productName,
         priceAtSale: price,
         quantity: Value(quantity),
         category: Value(category),
-        orderDate: Value(date ?? DateTime.now()), // ← Preferimos la hora de Dart
+        orderDate: Value(date ?? DateTime.now()),
+        paymentMethod: Value(paymentMethod),
       ),
     );
   }
@@ -87,15 +88,26 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
         .watch()
         .map((orders) {
       double totalSales = 0;
+      double cashSales = 0;
+      double cardSales = 0;
       int totalItems = 0;
 
       for (var order in orders) {
-        totalSales += order.priceAtSale * order.quantity;
+        final subtotal = order.priceAtSale * order.quantity;
+        totalSales += subtotal;
         totalItems += order.quantity;
+        
+        if (order.paymentMethod == 'Tarjeta') {
+          cardSales += subtotal;
+        } else {
+          cashSales += subtotal;
+        }
       }
 
       return {
         'totalSales': totalSales,
+        'cashSales': cashSales,
+        'cardSales': cardSales,
         'totalItems': totalItems,
         'ordersCount': orders.length,
       };
@@ -110,15 +122,26 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
 
     // Calcular totales
     double totalSales = 0;
+    double cashSales = 0;
+    double cardSales = 0;
     int totalItems = 0;
 
     for (var order in activeOrders) {
-      totalSales += order.priceAtSale * order.quantity;
+      final subtotal = order.priceAtSale * order.quantity;
+      totalSales += subtotal;
       totalItems += order.quantity;
+      
+      if (order.paymentMethod == 'Tarjeta') {
+        cardSales += subtotal;
+      } else {
+        cashSales += subtotal;
+      }
     }
 
     return {
       'totalSales': totalSales,
+      'cashSales': cashSales,
+      'cardSales': cardSales,
       'totalItems': totalItems,
       'ordersCount': activeOrders.length,
     };
@@ -136,6 +159,13 @@ class OrderDao extends DatabaseAccessor<AppDatabase> with _$OrderDaoMixin {
   Future<int> closeActiveOrders(int reportId) async {
     return await (update(orderItems)..where((tbl) => tbl.reportId.isNull())).write(
       OrderItemsCompanion(reportId: Value(reportId)),
+    );
+  }
+
+  // MARCAR GRUPO COMO ENTREGADO
+  Future<int> markOrderGroupAsDelivered(String groupId) async {
+    return await (update(orderItems)..where((tbl) => tbl.orderGroupId.equals(groupId))).write(
+      const OrderItemsCompanion(status: Value('entregado')),
     );
   }
 

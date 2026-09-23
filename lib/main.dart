@@ -16,6 +16,9 @@ void main() async {
     DeviceOrientation.landscapeLeft,
   ]);
 
+  // ✅ ESCONDER BARRA DE NOTIFICACIONES Y NAVEGACIÓN (MODO INMERSIVO)
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
   final database = AppDatabase(); // Instancia única
 
   runApp(

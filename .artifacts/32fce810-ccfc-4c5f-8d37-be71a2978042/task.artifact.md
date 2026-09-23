@@ -1,13 +1,14 @@
-# Tareas - Refresco de Estadísticas y Historial Full-Screen 🕒📊
+# Tareas - Overhaul del Monitor de Pedidos (KDS) 📋🍔🥤
 
-- [ ] **Actualizar DAO de Órdenes (`order_dao.dart`)**
-    - [ ] Implementar `watchTodayStats()` (Stream de ventas activas).
-- [ ] **Optimizar Panel de Estadísticas (`stats_panel.dart`)**
-    - [ ] Cambiar a `StreamBuilder` para actualización instantánea.
-- [ ] **Crear Pantalla de Historial Full-Screen (`day_preview_screen.dart`)**
-    - [ ] Diseñar layout que ocupe todo el ancho y alto.
-    - [ ] Implementar agrupación de productos y rentas.
-    - [ ] Añadir botón de regreso.
-- [ ] **Actualizar Navegación en `home_screen.dart`**
-    - [ ] Vincular botón Historial a `Navigator.push`.
+- [ ] **Evolución de Base de Datos (v13)**
+    - [ ] Añadir `orderGroupId` a `OrderItems` en `tables.dart`.
+    - [ ] Incrementar `schemaVersion` a 13 y añadir migración en `database.dart`.
+- [ ] **Actualización de DAO (`order_dao.dart`)**
+    - [ ] Añadir `markOrderGroupAsDelivered(String groupId)`.
+- [ ] **Lógica de Captura (`cart_sidebar.dart`)**
+    - [ ] Generar un ID de grupo único al momento del cobro.
+- [ ] **Interfaz de Usuario (Widgets)**
+    - [ ] Crear `lib/widgets/order_ticket_widget.dart`.
+- [ ] **Interfaz de Pantalla (`order_monitor_screen.dart`)**
+    - [ ] Implementar rejilla de tickets y lógica de agrupación.
 - [ ] **Verificación final**

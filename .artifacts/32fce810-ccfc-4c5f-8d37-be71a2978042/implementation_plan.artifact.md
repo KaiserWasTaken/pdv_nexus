@@ -1,38 +1,44 @@
-# Plan de Implementación - Refresco de Estadísticas y Pantalla de Historial Completa 🕒📊
+# Plan de Implementación - Overhaul del Monitor de Pedidos (KDS) 📋🍔🥤
 
-El objetivo es asegurar que las estadísticas se reinicien inmediatamente al generar el reporte PDF y transformar la vista de Historial en una pantalla completa que reemplace la interfaz principal.
+El objetivo es transformar el monitor de pedidos en un sistema de "Tickets de Orden", donde cada ticket agrupa todos los productos comprados en una misma transacción, organizados por categorías y con control individual de preparación.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Refresco Automático:** Cambiaremos el panel de estadísticas para que use Streams. Esto hará que en cuanto el PDF se genere y las ventas se "archiven", los números en pantalla bajen a $0.00 sin tener que reiniciar la app.
-> - **Historial Full-Screen:** Al tocar "Historial", la app navegará a una nueva pantalla que cubrirá todo el espacio (incluyendo el menú lateral). Tendrá su propio botón de regresar.
+> - **Evolución de Datos (v13):** Para agrupar los pedidos de forma confiable, añadiré una columna `orderGroupId` a la tabla `OrderItems`. Esto requiere una migración.
+> - **Lógica de Entrega:** El botón "Entregado" del ticket solo se activará cuando el empleado haya marcado todos los productos del ticket como listos. Esto garantiza que no se olvide nada.
+> - **Categorización:** Los productos dentro del ticket se separarán visualmente (ej: Bebidas arriba, Snacks abajo).
 
 ## Cambios Propuestos
 
-### 1. Base de Datos (DAO)
+### 1. Base de Datos (Evolución)
+#### [MODIFY] [tables.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/database/tables.dart)
+- Añadir `TextColumn get orderGroupId => text().nullable()();` a `OrderItems`.
+- Incrementar `schemaVersion` a `13` en `database.dart`.
+
+#### [MODIFY] [cart_sidebar.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/widgets/cart_sidebar.dart)
+- Generar un ID único (Timestamp o UUID) al momento de cobrar y asignarlo a todos los items de la compra.
+
+### 2. Lógica de Negocio (DAO)
 #### [MODIFY] [order_dao.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/database/daos/order_dao.dart)
-- Crear `watchTodayStats()`: Un Stream que emita el total de ventas y cantidad de items filtrando por `reportId.isNull()`. Esto permitirá que la UI reaccione a cambios en tiempo real.
+- Añadir `markOrderGroupAsDelivered(String groupId)`: Para finalizar todo el ticket de un solo golpe.
 
-### 2. Interfaz de Usuario (Widgets)
-#### [MODIFY] [stats_panel.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/widgets/stats_panel.dart)
-- Reemplazar `FutureBuilder` por `StreamBuilder` conectado a `watchTodayStats()`.
+### 3. Interfaz de Usuario (Monitor)
+#### [NEW] [order_ticket_widget.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/widgets/order_ticket_widget.dart)
+- Crear el widget personalizado con:
+    - **Header:** Número de orden (#) grande y hora de pedido.
+    - **Body:** Agrupación por categoría con iconos.
+    - **Item Row:** Nombre, cantidad y Checkbox interactivo.
+    - **Footer:** Botón "Entregado" con lógica de validación (solo activo si todo está checkeado).
 
-### 3. Pantalla de Historial (Full-Screen)
-#### [NEW] [day_preview_screen.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/screens/day_preview_screen.dart)
-- Crear una nueva pantalla que muestre:
-    - Lista detallada de productos vendidos (agrupados).
-    - Resumen de rentas por tipo de consola.
-    - Total acumulado.
-    - Botón de cerrar/regresar en la parte superior.
-
-#### [MODIFY] [home_screen.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/screens/home_screen.dart)
-- Cambiar la lógica del botón "Historial" para que use `Navigator.push` hacia `DayPreviewScreen` en lugar de abrir un diálogo.
+#### [MODIFY] [order_monitor_screen.dart](file:///C:/Users/Usuario/StudioProjects/pdv_nexus/lib/screens/order_monitor_screen.dart)
+- Cambiar la lista simple por una rejilla (`GridView`) de `OrderTicketWidget`.
+- Implementar la lógica de agrupación de la lista plana de la BD en objetos de orden estructurados.
 
 ## Plan de Verificación
 
 ### Verificación Manual
-- Realizar una venta y observar cómo el `StatsPanel` se actualiza al instante.
-- Generar el PDF y confirmar que el `StatsPanel` vuelve a $0.00 inmediatamente.
-- Tocar el botón "Historial" y verificar que la nueva pantalla ocupa el 100% de la tablet.
-- Regresar del historial y confirmar que la navegación vuelve al panel de administración.
+- Realizar una compra de 2 bebidas y 1 snack.
+- Verificar que en el monitor aparezca **un solo ticket** con los 3 items.
+- Intentar presionar "Entregado" sin marcar los checkboxes (debe estar deshabilitado).
+- Marcar todo, presionar "Entregado" y confirmar que el ticket desaparece.

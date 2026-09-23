@@ -9,8 +9,12 @@ import '../widgets/stats_panel.dart';
 import 'rentals_screen.dart';
 import 'order_monitor_screen.dart';
 import 'product_management_screen.dart';
-import 'day_preview_screen.dart'; // ✅ Añadido
-import '../services/report_service.dart'; // ✅ NUEVO
+import 'day_preview_screen.dart';
+import 'expenses_screen.dart'; // ✅ Añadido
+import '../widgets/drink_customization_dialog.dart';
+import '../widgets/food_customization_dialog.dart'; // ✅ Añadido
+import '../widgets/combo_drink_dialog.dart'; // ✅ Añadido
+import '../services/report_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,30 +103,45 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Row(
         children: [
           // 1. MENÚ LATERAL (IZQUIERDA)
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() => _selectedIndex = index);
-            },
-            labelType: NavigationRailLabelType.all,
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.coffee),
-                label: Text('Cafetería'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.videogame_asset),
-                label: Text('Rentas'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.list_alt),
-                label: Text('Monitor'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.settings),
-                label: Text('Admin'),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: NavigationRail(
+                      selectedIndex: _selectedIndex,
+                      onDestinationSelected: (int index) {
+                        setState(() => _selectedIndex = index);
+                      },
+                      labelType: NavigationRailLabelType.all,
+                      destinations: const [
+                        NavigationRailDestination(
+                          icon: Icon(Icons.coffee),
+                          label: Text('Cafetería'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.videogame_asset),
+                          label: Text('Rentas'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.list_alt),
+                          label: Text('Monitor'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.money_off),
+                          label: Text('Gastos'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.settings),
+                          label: Text('Admin'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
           ),
 
           const VerticalDivider(thickness: 1, width: 1),
@@ -159,6 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const RentalsScreen();
       case 2:
         return const OrderMonitorScreen();
+      case 3:
+        return const ExpensesScreen();
       default:
         return _buildAdminPanel();
     }
@@ -273,10 +294,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMenuContent() {
     if (_currentCategory == null) return _buildCategorySelection();
     if (_currentCategory == 'Bebidas' && _currentSubcategory == null) return _buildBebidasSubcategorySelection();
+    if (_currentCategory == 'Comidas' && _currentSubcategory == null) return _buildComidasSubcategorySelection();
     return _buildProductGrid();
   }
 
   Widget _buildCategorySelection() {
+// ... (mismo código)
     final categories = [
       {'name': 'Bebidas', 'icon': Icons.local_drink},
       {'name': 'Comidas', 'icon': Icons.fastfood},
@@ -304,15 +327,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBebidasSubcategorySelection() {
     final subcategories = [
-      {'name': 'Bubble Tea', 'icon': Icons.bubble_chart},
+      {'name': 'Bubble Tea Base Leche', 'icon': Icons.bubble_chart},
+      {'name': 'Bubble Tea Base Agua', 'icon': Icons.bubble_chart_outlined},
       {'name': 'Soda Italiana', 'icon': Icons.local_bar},
       {'name': 'Tisana', 'icon': Icons.emoji_food_beverage},
-      {'name': 'Frappé', 'icon': Icons.icecream},
+      {'name': 'Chamoyada', 'icon': Icons.icecream},
+      {'name': 'Otros', 'icon': Icons.more_horiz},
     ];
 
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount: 3,
         crossAxisSpacing: 20,
         mainAxisSpacing: 20,
         childAspectRatio: 1.5,
@@ -329,13 +354,264 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildComidasSubcategorySelection() {
+    final subcategories = [
+      {'name': 'Nexuleta', 'icon': Icons.flatware},
+      {'name': 'Nachos', 'icon': Icons.lunch_dining},
+      {'name': 'Mini Hot Cakes', 'icon': Icons.cookie},
+      {'name': 'Palomitas', 'icon': Icons.animation},
+      {'name': 'Maruchan', 'icon': Icons.soup_kitchen}, // ✅ Añadido
+      {'name': 'Otros Snacks', 'icon': Icons.more_horiz},
+    ];
+
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
+        childAspectRatio: 1.5,
+      ),
+      itemCount: subcategories.length,
+      itemBuilder: (context, index) {
+        final sub = subcategories[index];
+        return _MenuNavigationButton(
+          title: sub['name'] as String,
+          icon: sub['icon'] as IconData,
+          onTap: () => setState(() => _currentSubcategory = sub['name'] as String),
+        );
+      },
+    );
+  }
+
+  // ========================================
+  // LÓGICA PARA RESOLVER COMBOS DINÁMICOS
+  // ========================================
+  Future<void> _handleComboSelection(BuildContext context, Product combo) async {
+    final db = context.read<AppDatabase>();
+    final cart = context.read<CartProvider>();
+    
+    final comboItems = await db.productDao.getPackageItems(combo.id);
+    
+    if (comboItems.isEmpty) {
+      cart.addItem(combo.name, combo.price, category: 'Combos');
+      _showAddedToCartFeedback(context, combo.name);
+      return;
+    }
+
+    List<String> selections = [];
+    List<Map<String, dynamic>> structuredComponents = []; // ✅ Para el monitor
+    double comboTotalPrice = combo.price; 
+    bool cancelled = false;
+
+    for (var item in comboItems) {
+      if (cancelled) break;
+
+      final int qty = item['quantity'] as int;
+      for (int i = 0; i < qty; i++) {
+        final String category = item['category'] as String;
+        final bool isPlaceholder = item['isPlaceholder'] == true;
+
+        if (category == 'Bebidas') {
+          String drinkName = "";
+          String? subcategory;
+          double drinkBasePrice = 0;
+
+          if (isPlaceholder) {
+            final allProducts = await db.productDao.getActiveProducts();
+            final drinks = allProducts.where((p) => p.category == 'Bebidas').toList();
+            
+            if (!context.mounted) return;
+            final selected = await showDialog<String>(
+              context: context,
+              builder: (context) => ComboDrinkDialog(
+                eligibleDrinks: drinks,
+                comboName: "${combo.name} (Bebida ${i+1}/$qty)",
+              ),
+            );
+            if (selected == null) { cancelled = true; break; }
+            drinkName = selected;
+            final p = drinks.firstWhere((p) => p.name == selected);
+            subcategory = p.subcategory;
+            drinkBasePrice = p.price;
+          } else {
+            drinkName = item['name'];
+            final p = await db.productDao.getProductById(item['productId']);
+            subcategory = p?.subcategory;
+            drinkBasePrice = p?.price ?? 0;
+          }
+
+          if (!context.mounted) return;
+          final customResult = await showDialog<Map<String, dynamic>>(
+            context: context,
+            builder: (context) => DrinkCustomizationDialog(
+              productName: drinkName,
+              basePrice: drinkBasePrice,
+              subcategory: subcategory ?? 'Bebida',
+            ),
+          );
+
+          if (customResult == null) { cancelled = true; break; }
+          
+          final double extra = (customResult['finalPrice'] as double) - drinkBasePrice;
+          if (extra > 0) comboTotalPrice += extra;
+
+          final List<String> modsList = List<String>.from(customResult['modifiers'] ?? []);
+          final String modsText = modsList.join(', ');
+          
+          selections.add("$drinkName ${modsText.isNotEmpty ? '($modsText)' : '(Original)'}");
+          
+          // ✅ Guardar componente estructurado
+          structuredComponents.add({
+            'name': drinkName,
+            'category': 'Bebidas',
+            'modifiers': modsText,
+          });
+
+        } else if (category == 'Comidas') {
+          String foodName = item['name'];
+          String? subcategory;
+          double foodBasePrice = 0;
+
+          if (!isPlaceholder) {
+            final p = await db.productDao.getProductById(item['productId']);
+            subcategory = p?.subcategory;
+            foodBasePrice = p?.price ?? 0;
+          }
+
+          if (!context.mounted) return;
+          final customResult = await showDialog<Map<String, dynamic>>(
+            context: context,
+            builder: (context) => FoodCustomizationDialog(
+              productName: foodName,
+              basePrice: foodBasePrice,
+              subcategory: subcategory ?? 'Comida',
+            ),
+          );
+
+          if (customResult == null) { cancelled = true; break; }
+          
+          final double extra = (customResult['finalPrice'] as double) - foodBasePrice;
+          if (extra > 0) comboTotalPrice += extra;
+
+          final List<String> modsList = List<String>.from(customResult['modifiers'] ?? []);
+          final String modsText = modsList.join(', ');
+          
+          selections.add("$foodName ${modsText.isNotEmpty ? '($modsText)' : '(Incluido)'}");
+
+          // ✅ Guardar componente estructurado
+          structuredComponents.add({
+            'name': foodName,
+            'category': 'Comidas',
+            'modifiers': modsText,
+          });
+
+        } else if (category == 'Rentas') {
+          if (!context.mounted) return;
+          final selectedConsole = await _showConsolePicker(context, "${combo.name} (${item['name']})");
+          if (selectedConsole == null) { cancelled = true; break; }
+
+          if (!context.mounted) return;
+          int extraControllers = 0;
+          final bool? confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => StatefulBuilder(
+              builder: (ctx, setDS) => AlertDialog(
+                backgroundColor: const Color(0xFF000F4D),
+                title: Text("Controles: $selectedConsole"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text("¿Controles adicionales?", style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(icon: const Icon(Icons.remove_circle, color: Colors.red), onPressed: extraControllers > 0 ? () => setDS(() => extraControllers--) : null),
+                        Text("$extraControllers", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                        IconButton(icon: const Icon(Icons.add_circle, color: Colors.green), onPressed: extraControllers < 3 ? () => setDS(() => extraControllers++) : null),
+                      ],
+                    ),
+                    Text("(+\$${extraControllers * 15} MXN)", style: const TextStyle(color: Color(0xFFFFDE00), fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("CANCELAR")),
+                  ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("ACEPTAR")),
+                ],
+              ),
+            ),
+          );
+
+          if (confirmed != true) { cancelled = true; break; }
+          
+          if (extraControllers > 0) {
+            comboTotalPrice += (extraControllers * 15.0);
+          }
+
+          selections.add("Consola: $selectedConsole ${extraControllers > 0 ? '(+$extraControllers controles)' : ''}");
+          
+          // ✅ Guardar componente estructurado (para el timer de renta)
+          structuredComponents.add({
+            'name': item['name'],
+            'category': 'Rentas',
+            'consoleName': selectedConsole,
+            'extraControllers': extraControllers,
+            'minutes': item['name'].toString().contains('Hora') ? 60 : 30, // Detección simple por nombre
+          });
+          
+        } else {
+          selections.add("${item['name']} (x${item['quantity']})");
+        }
+      }
+    }
+
+    if (!cancelled && context.mounted) {
+      cart.addItem(
+        combo.name, 
+        comboTotalPrice, 
+        category: 'Combos',
+        modifiers: selections,
+        comboComponents: structuredComponents, // ✅ PASAR COMPONENTES REALES
+      );
+      _showAddedToCartFeedback(context, combo.name);
+    }
+  }
+
+  Future<String?> _showConsolePicker(BuildContext context, String title) async {
+    // Lista de consolas (podría venir de la DB, pero usamos la lista estándar por ahora)
+    final consoles = ['Switch 1', 'Switch 2', 'Xbox A', 'Xbox B', 'Xbox C', 'Xbox D', 'PS5'];
+    
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF000F4D),
+        title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 18)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: consoles.map((c) => ListTile(
+              title: Text(c, style: const TextStyle(color: Colors.white)),
+              trailing: const Icon(Icons.videogame_asset, color: Color(0xFFFFDE00)),
+              onTap: () => Navigator.pop(ctx, c),
+            )).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildProductGrid() {
     final db = context.read<AppDatabase>();
 
     return StreamBuilder<List<Product>>(
       stream: db.productDao.watchActiveProducts(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
 
         final filteredProducts = snapshot.data!.where((p) {
           bool matchCategory = p.category == _currentCategory;
@@ -370,10 +646,66 @@ class _HomeScreenState extends State<HomeScreen> {
                   category: product.category,
                   description: product.description,
                   imagePath: product.imagePath,
-                  onTap: () {
+                  onTap: () async {
                     final cart = context.read<CartProvider>();
-                    cart.addItem(product.name, product.price);
-                    _showAddedToCartFeedback(context, product.name);
+
+                    // Solo abrir personalización si es Bebida y NO es de la subcategoría 'Otros'
+                    if (product.category == 'Bebidas' && product.subcategory != 'Otros') {
+                      // Abrir diálogo de personalización de bebidas
+                      final result = await showDialog<Map<String, dynamic>>(
+                        context: context,
+                        builder: (context) => DrinkCustomizationDialog(
+                          productName: product.name,
+                          basePrice: product.price,
+                          subcategory: product.subcategory ?? 'Bebida',
+                        ),
+                      );
+
+                      if (result != null) {
+                        cart.addItem(
+                          product.name,
+                          result['finalPrice'] as double,
+                          category: product.category,
+                          modifiers: List<String>.from(result['modifiers'] ?? []),
+                        );
+                        if (context.mounted) {
+                          _showAddedToCartFeedback(context, product.name);
+                        }
+                      }
+                    } else if (product.category == 'Comidas') {
+                      // ✅ NUEVO: Abrir diálogo de personalización de comidas
+                      final result = await showDialog<Map<String, dynamic>>(
+                        context: context,
+                        builder: (context) => FoodCustomizationDialog(
+                          productName: product.name,
+                          basePrice: product.price,
+                          subcategory: product.subcategory ?? 'Comida',
+                        ),
+                      );
+
+                      if (result != null) {
+                        cart.addItem(
+                          product.name,
+                          result['finalPrice'] as double,
+                          category: product.category,
+                          modifiers: List<String>.from(result['modifiers'] ?? []),
+                        );
+                        if (context.mounted) {
+                          _showAddedToCartFeedback(context, product.name);
+                        }
+                      }
+                    } else if (product.category == 'Combos') {
+                      // ✅ NUEVO: Lógica de Constructor de Combos Dinámicos
+                      await _handleComboSelection(context, product);
+                    } else {
+                      // Agregar directamente para 'Otros'
+                      cart.addItem(
+                        product.name, 
+                        product.price,
+                        category: product.category, // ✅ Pasar categoría real
+                      );
+                      _showAddedToCartFeedback(context, product.name);
+                    }
                   },
                 );
               },
@@ -385,8 +717,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getCleanProductName(String fullName, String? subcategory) {
-    if (subcategory == null) return fullName;
-    String cleanName = fullName.replaceFirst(subcategory, '').trim();
+    String cleanName = fullName;
+
+    // 1. Eliminar prefijos comunes redundantes de forma agresiva
+    final prefixesToRemove = [
+      'Bubble Tea ',
+      'Soda Italiana ',
+      'Tisana ',
+      'Chamoyada de ',
+    ];
+
+    for (var prefix in prefixesToRemove) {
+      if (cleanName.startsWith(prefix)) {
+        cleanName = cleanName.replaceFirst(prefix, '');
+      }
+    }
+
+    // 2. Si todavía queda el nombre de la subcategoría al inicio, quitarlo
+    if (subcategory != null && cleanName.startsWith(subcategory)) {
+      cleanName = cleanName.replaceFirst(subcategory, '').trim();
+    }
+
     if (cleanName.isEmpty) return fullName;
     return cleanName;
   }

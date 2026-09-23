@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:drift/drift.dart' hide Column; // ✅ Añadido para Value
 import '../database/database.dart';
 import '../providers/cart_provider.dart';
 import '../providers/rental_provider.dart';
@@ -72,6 +71,79 @@ class _RentalsScreenState extends State<RentalsScreen> {
               },
             ),
           ),
+
+          const SizedBox(height: 16),
+
+          // ✅ NUEVO: BOTÓN PARA VENDER CONTROL EXTRA SOLO
+          SizedBox(
+            width: double.infinity,
+            height: 70,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00187A),
+                foregroundColor: const Color(0xFFFFDE00),
+                side: const BorderSide(color: Color(0xFFFFDE00), width: 2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: () => _showExtraControllerDialog(),
+              icon: const Icon(Icons.sports_esports, size: 32),
+              label: const Text(
+                "CONTROL EXTRA (\$15.00)",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showExtraControllerDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF00187A),
+        title: const Text("Control Extra", style: TextStyle(color: Colors.white)),
+        content: const Text("¿Deseas añadirlo al carrito o cobrarlo ahora mismo?",
+            style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              final cart = context.read<CartProvider>();
+              cart.addItem(
+                "Control Extra", 
+                15.0, 
+                category: 'Rentas', // ✅ Categoría correcta
+                type: CartItemType.rental
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Control extra añadido al carrito"), backgroundColor: Colors.blue),
+              );
+              Navigator.pop(ctx);
+            },
+            child: const Text("AÑADIR AL CARRITO", style: TextStyle(color: Color(0xFFFFDE00))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () async {
+              final db = context.read<AppDatabase>();
+              // Registrar venta inmediata
+              await db.orderDao.insertOrder(
+                "Control Extra (Venta rápida)",
+                15.0,
+                1,
+                category: 'Rentas',
+                date: DateTime.now(),
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Venta de control registrada"), backgroundColor: Colors.green),
+                );
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text("COBRAR (\$15)"),
+          ),
         ],
       ),
     );
@@ -110,7 +182,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
                   onChanged: (val) => setDialogState(() => selectedMinutes = val!),
                 ),
                 const SizedBox(height: 20),
-                const Text("Controles adicionales (+10 c/u):", style: TextStyle(color: Colors.white70)),
+                const Text("Controles adicionales (+15 c/u):", style: TextStyle(color: Colors.white70)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -127,7 +199,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
                 ),
                 const Divider(color: Colors.white24, height: 30),
                 Text(
-                  "A PAGAR: \$${rentalProvider.calculateCostForTime(selectedMinutes, extraControllers).toStringAsFixed(0)}",
+                  "A PAGAR: \$${rentalProvider.calculateCostForTime(selectedMinutes, extraControllers, isExtension: false).toStringAsFixed(0)}",
                   style: const TextStyle(color: Color(0xFFFFDE00), fontSize: 22, fontWeight: FontWeight.w900),
                 ),
               ],
@@ -139,7 +211,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFDE00)),
               onPressed: () {
                 final cart = context.read<CartProvider>();
-                final price = rentalProvider.calculateCostForTime(selectedMinutes, extraControllers);
+                final price = rentalProvider.calculateCostForTime(selectedMinutes, extraControllers, isExtension: false);
                 
                 cart.addRentalItem(
                   consoleName: consoleName,
@@ -151,7 +223,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("$consoleName añadido al carrito"), backgroundColor: Colors.blue),
                 );
-                Navigator.pop(ctx);
+                Navigator.of(context).pop();
               },
               child: const Text("AÑADIR AL CARRITO", style: TextStyle(color: Color(0xFF00187A), fontWeight: FontWeight.bold)),
             ),
@@ -221,7 +293,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  "A COBRAR: \$${rentalProvider.calculateCostForTime(extraMin, 0).toStringAsFixed(0)}",
+                  "A COBRAR: \$${rentalProvider.calculateCostForTime(extraMin, 0, isExtension: true).toStringAsFixed(0)}",
                   style: const TextStyle(color: Color(0xFFFFDE00), fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -234,7 +306,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
               onPressed: () async {
                 final db = context.read<AppDatabase>();
                 final currentEnd = rental.expectedEndTime ?? DateTime.now();
-                final cost = rentalProvider.calculateCostForTime(extraMin, 0);
+                final cost = rentalProvider.calculateCostForTime(extraMin, 0, isExtension: true);
                 
                 // 1. REGISTRAR VENTA ÚNICA EN HISTORIAL
                 await db.orderDao.insertOrder(
@@ -253,7 +325,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
                     const SnackBar(content: Text("Venta registrada y tiempo añadido"), backgroundColor: Colors.green),
                   );
                 }
-                if (mounted) Navigator.pop(ctx);
+                if (mounted) Navigator.of(context).pop();
               },
               child: const Text("COBRAR Y APLICAR"),
             ),

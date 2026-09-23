@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../database/database.dart';
+import '../widgets/order_ticket_widget.dart'; // ✅ Nuevo
 
 class OrderMonitorScreen extends StatelessWidget {
   const OrderMonitorScreen({super.key});
@@ -25,7 +26,7 @@ class OrderMonitorScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "MONITOR DE PEDIDOS",
+                "MONITOR DE BARRA",
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
@@ -34,44 +35,29 @@ class OrderMonitorScreen extends StatelessWidget {
                 ),
               ),
 
-              // Indicador de órdenes pendientes
+              // Indicador de tickets pendientes
               StreamBuilder<List<OrderItem>>(
                 stream: db.orderDao.watchPendingOrders(),
                 builder: (context, snapshot) {
-                  final pendingCount = snapshot.data?.length ?? 0;
+                  final orders = snapshot.data ?? [];
+                  // Contar grupos únicos
+                  final uniqueGroups = orders.map((o) => o.orderGroupId ?? 'none').toSet();
+                  final pendingCount = uniqueGroups.contains('none') ? orders.length : uniqueGroups.length;
+                  
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: pendingCount > 0 ? nexusRed : Colors.green,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: pendingCount > 0
-                          ? [
-                        BoxShadow(
-                          color: nexusRed.withOpacity(0.5),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                          : null,
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          pendingCount > 0 ? Icons.pending_actions : Icons.check_circle,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        Icon(pendingCount > 0 ? Icons.pending_actions : Icons.check_circle, color: Colors.white),
                         const SizedBox(width: 8),
                         Text(
-                          pendingCount > 0
-                              ? "$pendingCount Pendientes"
-                              : "¡Todo Entregado!",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                          pendingCount > 0 ? "$pendingCount Tickets" : "¡Todo Listo!",
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -84,236 +70,54 @@ class OrderMonitorScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           // ============================================
-          // LISTA DE ÓRDENES PENDIENTES
+          // GRID DE TICKETS DE ORDEN
           // ============================================
           Expanded(
             child: StreamBuilder<List<OrderItem>>(
               stream: db.orderDao.watchPendingOrders(),
               builder: (context, snapshot) {
-                // Estados de carga
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: nexusYellow),
-                  );
+                  return const Center(child: CircularProgressIndicator(color: nexusYellow));
                 }
 
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 64, color: nexusRed),
-                        const SizedBox(height: 16),
-                        Text(
-                          "Error: ${snapshot.error}",
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  );
+                final allPending = snapshot.data ?? [];
+
+                if (allPending.isEmpty) {
+                  return const _EmptyState();
                 }
 
-                final pendingOrders = snapshot.data ?? [];
-
-                // Si no hay órdenes pendientes
-                if (pendingOrders.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check_circle_outline,
-                          size: 100,
-                          color: Colors.green.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          "¡Todo entregado!",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white70,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          "No hay pedidos pendientes",
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                      ],
-                    ),
-                  );
+                // Agrupar items por orderGroupId
+                final Map<String, List<OrderItem>> tickets = {};
+                for (var item in allPending) {
+                  final String groupId = item.orderGroupId ?? "S-${item.id}"; // Fallback para registros viejos
+                  tickets.putIfAbsent(groupId, () => []).add(item);
                 }
 
-                // Lista de órdenes con Dismissible (swipe para marcar)
-                return ListView.builder(
-                  itemCount: pendingOrders.length,
+                return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2, // ✅ Cambiado de 3 a 2 para tickets más grandes
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.9, // Ajustado ligeramente para mayor ancho
+                  ),
+                  itemCount: tickets.length,
                   itemBuilder: (context, index) {
-                    final order = pendingOrders[index];
+                    final groupId = tickets.keys.elementAt(index);
+                    final ticketItems = tickets[groupId]!;
 
-                    return Dismissible(
-                      key: Key('order_${order.id}'),
-                      direction: DismissDirection.endToStart,
-                      confirmDismiss: (direction) async {
-                        return await _showConfirmDialog(context, order);
-                      },
-                      onDismissed: (direction) async {
-                        await db.orderDao.markAsDelivered(order.id);
-
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      '"${order.productName}" entregado',
-                                      style: const TextStyle(fontSize: 13),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              backgroundColor: Colors.green.shade700,
-                              duration: const Duration(milliseconds: 1500),
-                              behavior: SnackBarBehavior.floating,
-                              margin: const EdgeInsets.only(
-                                bottom: 70,
-                                left: 20,
-                                right: 20,
-                              ),
-                              dismissDirection: DismissDirection.horizontal,
-                            ),
-                          );
+                    return OrderTicketWidget(
+                      key: ValueKey(groupId), // ✅ Asegurar que el estado no se comparta
+                      groupId: groupId,
+                      items: ticketItems,
+                      onDelivered: () async {
+                        // Si tiene groupId, marcar todo el grupo
+                        if (groupId.startsWith('ORD')) {
+                          await db.orderDao.markOrderGroupAsDelivered(groupId);
+                        } else {
+                          // Si es individual (viejo), marcar solo ese
+                          await db.orderDao.markAsDelivered(ticketItems.first.id);
                         }
                       },
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        color: Colors.green,
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.white, size: 40),
-                            SizedBox(height: 8),
-                            Text(
-                              "ENTREGAR",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      child: Card(
-                        color: nexusBlue.withOpacity(0.7),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          side: const BorderSide(color: nexusYellow, width: 2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              // Indicador visual
-                              Container(
-                                width: 8,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: nexusRed,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-
-                              const SizedBox(width: 16),
-
-                              // Información del pedido
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        order.productName,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Cantidad: ${order.quantity} | \$${order.priceAtSale.toStringAsFixed(2)} c/u",
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _formatTime(order.orderDate),
-                                      style: const TextStyle(
-                                        color: nexusYellow,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              // Botón alternativo (además del swipe)
-                              IconButton(
-                                icon: const Icon(Icons.check_circle, color: Colors.green),
-                                iconSize: 32,
-                                onPressed: () async {
-                                  final confirm = await _showConfirmDialog(context, order);
-                                  if (confirm == true) {
-                                    await db.orderDao.markAsDelivered(order.id);
-
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).clearSnackBars();
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  '"${order.productName}" entregado',
-                                                  style: const TextStyle(fontSize: 13),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          backgroundColor: Colors.green.shade700,
-                                          duration: const Duration(milliseconds: 1500),
-                                          behavior: SnackBarBehavior.floating,
-                                          margin: const EdgeInsets.only(
-                                            bottom: 70,
-                                            left: 20,
-                                            right: 20,
-                                          ),
-                                          dismissDirection: DismissDirection.horizontal,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     );
                   },
                 );
@@ -324,55 +128,22 @@ class OrderMonitorScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  // ============================================
-  // DIÁLOGO DE CONFIRMACIÓN
-  // ============================================
-  Future<bool?> _showConfirmDialog(BuildContext context, OrderItem order) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF00187A),
-        title: const Text(
-          "Confirmar Entrega",
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          '¿Marcar "${order.productName}" (x${order.quantity}) como entregado?',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Cancelar", style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Confirmar"),
-          ),
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle_outline, size: 100, color: Colors.green.withOpacity(0.3)),
+          const SizedBox(height: 20),
+          const Text("¡Todo entregado!", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white54)),
         ],
       ),
     );
-  }
-
-  // ============================================
-  // FORMATEAR TIEMPO
-  // ============================================
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return "Hace unos segundos";
-    } else if (difference.inMinutes < 60) {
-      return "Hace ${difference.inMinutes} min";
-    } else if (difference.inHours < 24) {
-      return "Hace ${difference.inHours}h ${difference.inMinutes % 60}min";
-    } else {
-      return "${dateTime.day}/${dateTime.month} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}";
-    }
   }
 }

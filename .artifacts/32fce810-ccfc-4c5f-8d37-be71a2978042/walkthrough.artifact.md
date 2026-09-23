@@ -1,31 +1,27 @@
-# Resumen de Cambios - Refresco Automático e Historial Full-Screen 🕒📊
+# Corrección de Categorías en el Monitor de Pedidos 📋🍔🥤
 
-Se han aplicado optimizaciones críticas en la gestión de estadísticas y una nueva experiencia visual para el historial de ventas.
+Se ha solucionado el problema técnico que impedía que las "Comidas" se mostraran en su propia sección dentro de los tickets del monitor.
 
 ## Cambios Realizados
 
-### Estadísticas en Tiempo Real
+### 1. Inteligencia del Carrito (`CartProvider`)
+- **Almacenamiento de Categoría**: Se actualizó el modelo `CartItem` para que recuerde a qué categoría pertenece cada producto (Bebidas, Comidas, Rentas o Combos) desde el momento en que se añade al carrito.
+- **Flujo de Datos**: Se modificó el método `addItem` para que sea obligatorio pasar la categoría, asegurando que la información nunca se pierda.
 
-- **Uso de Streams**: El panel de estadísticas (`StatsPanel`) ahora utiliza un `Stream` en lugar de un `Future`. Esto permite que cualquier cambio en la base de datos (como una nueva venta o el cierre del día) se refleje instantáneamente en la pantalla sin necesidad de recargar.
-- **Reseteo Automático**: Se confirmó que al generar el **Reporte PDF**, el archivado de ventas dispara automáticamente el reseteo de los contadores a **$0.00**.
+### 2. Registro Preciso de Ventas (`CartSidebar`)
+- **Fin del "Hardcode"**: Se eliminó la lógica que marcaba erróneamente todos los productos como "Bebidas" al momento de cobrar. Ahora, el sistema utiliza la categoría real guardada en el carrito para registrar la venta en la base de datos.
 
-### Pantalla de Historial Full-Screen (`DayPreviewScreen`)
+### 3. Integración en el Menú (`HomeScreen`)
+- Se actualizaron todos los botones del menú (Bebidas, Alimentos, Snacks y Combos) para que envíen su categoría correcta al sistema de cobro.
 
-- **Experiencia Inmersiva**: El botón de Historial ya no abre un pequeño diálogo. Ahora navega a una pantalla completa que oculta el menú lateral, ofreciendo mucho más espacio para leer el avance del turno.
-- **Diseño de Dos Columnas**:
-    - **Izquierda**: Resumen detallado de productos y rentas con tablas legibles.
-    - **Derecha**: Destacado del **Gran Total** acumulado con una fuente de gran tamaño para visibilidad a distancia.
-- **Botón de Cierre**: Incluye un botón de "Cerrar" (X) prominente para volver rápidamente al panel de administración.
+### 4. Monitor de Pedidos Automático
+- Gracias a que los datos ahora se guardan correctamente, el monitor de pedidos separará visualmente las **Bebidas** de las **Comidas** en cada ticket de forma automática, mostrando sus respectivos iconos y encabezados.
 
-### Optimización de Base de Datos
-
-- **DAO Mejorado**: Se añadió `watchTodayStats()` al `OrderDao` para soportar la actualización reactiva de la interfaz de usuario.
-
-## Verificación
-
-- Se validó que al realizar una venta, el panel de administración se actualiza al segundo.
-- Se comprobó que el flujo de navegación hacia el historial cubre todo el "monitor" de la aplicación.
-- El análisis estático confirma que no hay errores de compilación en los nuevos componentes.
+## Verificación Sugerida
+1. Agrega una **Nexuleta** y un **Bubble Tea** al mismo carrito.
+2. Presiona **Cobrar**.
+3. Ve al **Monitor de Barra**.
+4. Verás que el ticket ahora tiene dos secciones claramente divididas: una con el icono de bebida 🥤 y otra con el icono de comida 🍔.
 
 > [!TIP]
-> Esta nueva pantalla de historial es ideal para dar un "sneak peak" rápido a los dueños o gerentes sin interrumpir la operación de venta, ya que muestra toda la información crítica en un solo vistazo.
+> Esta división ayuda al personal a identificar rápidamente qué cosas se preparan en la barra y qué cosas requieren atención en la cocina/área de snacks.

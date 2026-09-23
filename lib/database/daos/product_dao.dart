@@ -4,7 +4,7 @@ import '../tables.dart';
 
 part 'product_dao.g.dart';
 
-@DriftAccessor(tables: [Products, PackageItems, ProductModifiers])
+@DriftAccessor(tables: [Products, PackageItems, ProductModifiers, ComboEligibleDrinks])
 class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
   ProductDao(AppDatabase db) : super(db);
 
@@ -75,35 +75,40 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
     required double price,
     required String description,
     String? imagePath,
-    required List<Map<String, int>> items, // [{productId: 1, quantity: 2}, ...]
+    required List<Map<String, dynamic>> items, // Lista dinámica
   }) async {
-    // Insertar el paquete
-    final packageId = await into(products).insert(
-      ProductsCompanion.insert(
-        name: name,
-        price: price,
-        category: 'Combos',
-        description: Value(description),
-        imagePath: Value(imagePath),
-        productType: const Value('paquete'),
-      ),
-    );
+    return await transaction(() async {
+      // 1. Insertar el producto Combo
+      final packageId = await into(products).insert(
+        ProductsCompanion.insert(
+          name: name,
+          price: price,
+          category: 'Combos',
+          description: Value(description),
+          imagePath: Value(imagePath),
+          productType: const Value('paquete'),
+        ),
+      );
 
-    // Insertar los items del paquete
-    await batch((batch) {
-      for (var item in items) {
-        batch.insert(
-          packageItems,
-          PackageItemsCompanion.insert(
-            packageId: packageId,
-            productId: item['productId']!,
-            quantity: Value(item['quantity']!),
-          ),
-        );
-      }
+      // 2. Insertar los items del combo (reales o placeholders)
+      await batch((batch) {
+        for (var item in items) {
+          batch.insert(
+            packageItems,
+            PackageItemsCompanion.insert(
+              packageId: packageId,
+              productId: Value(item['productId']),
+              quantity: Value(item['quantity']),
+              isPlaceholder: Value(item['isPlaceholder'] ?? false),
+              placeholderCategory: Value(item['category']),
+              placeholderName: Value(item['name']),
+            ),
+          );
+        }
+      });
+
+      return packageId;
     });
-
-    return packageId;
   }
 
   // ========================================
@@ -111,7 +116,7 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
   // ========================================
   Future<List<Map<String, dynamic>>> getPackageItems(int packageId) async {
     final query = select(packageItems).join([
-      innerJoin(products, products.id.equalsExp(packageItems.productId))
+      leftOuterJoin(products, products.id.equalsExp(packageItems.productId))
     ])
       ..where(packageItems.packageId.equals(packageId));
 
@@ -119,13 +124,14 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
 
     return results.map((row) {
       final item = row.readTable(packageItems);
-      final product = row.readTable(products);
+      final product = row.readTableOrNull(products);
 
       return {
-        'productId': product.id,
-        'productName': product.name,
+        'productId': item.productId, // ✅ Eliminado .value (era int?)
+        'name': item.isPlaceholder ? item.placeholderName : (product?.name ?? 'Producto no encontrado'),
         'quantity': item.quantity,
-        'price': product.price,
+        'isPlaceholder': item.isPlaceholder,
+        'category': item.isPlaceholder ? item.placeholderCategory : (product?.category ?? 'Otros'),
       };
     }).toList();
   }
@@ -229,5 +235,54 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
       'comidas': comidas,
       'paquetes': paquetes,
     };
+  }
+
+  // ========================================
+  // 14. GESTIÓN DE BEBIDAS ELEGIBLES
+  // ========================================
+  Future<List<Product>> getEligibleDrinksForCombo(int comboId) async {
+    final query = select(comboEligibleDrinks).join([
+      innerJoin(products, products.id.equalsExp(comboEligibleDrinks.drinkId))
+    ])
+      ..where(comboEligibleDrinks.comboId.equals(comboId));
+
+    final results = await query.get();
+    return results.map((row) => row.readTable(products)).toList();
+  }
+
+  Future<void> setEligibleDrinksForCombo(int comboId, List<int> drinkIds) async {
+    await (delete(comboEligibleDrinks)..where((tbl) => tbl.comboId.equals(comboId))).go();
+    await batch((batch) {
+      for (var id in drinkIds) {
+        batch.insert(comboEligibleDrinks, ComboEligibleDrinksCompanion.insert(comboId: comboId, drinkId: id));
+      }
+    });
+  }
+
+  // ========================================
+  // 15. ACTUALIZAR ITEMS DE UN PAQUETE
+  // ========================================
+  Future<void> updatePackageItems(int packageId, List<Map<String, dynamic>> items) async {
+    await transaction(() async {
+      // 1. Eliminar items actuales
+      await (delete(packageItems)..where((tbl) => tbl.packageId.equals(packageId))).go();
+
+      // 2. Insertar nuevos items
+      await batch((batch) {
+        for (var item in items) {
+          batch.insert(
+            packageItems,
+            PackageItemsCompanion.insert(
+              packageId: packageId,
+              productId: Value(item['productId']),
+              quantity: Value(item['quantity']),
+              isPlaceholder: Value(item['isPlaceholder'] ?? false),
+              placeholderCategory: Value(item['category']),
+              placeholderName: Value(item['name']),
+            ),
+          );
+        }
+      });
+    });
   }
 }

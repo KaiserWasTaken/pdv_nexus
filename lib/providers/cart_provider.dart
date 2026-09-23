@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 enum CartItemType { product, rental }
 
@@ -8,20 +9,30 @@ class CartItem {
   final double price;
   int quantity;
   final CartItemType type;
+  final String category; // ✅ NUEVO: Para distinguir en el monitor
   
   // Metadatos para rentas
   final String? consoleName;
   final int? minutes;
   final int? extraControllers;
 
+  // ✅ NUEVO: Modificadores para personalización
+  final List<String> modifiers;
+
+  // ✅ NUEVO: Componentes estructurados para el monitor
+  final List<Map<String, dynamic>>? comboComponents; 
+
   CartItem({
     required this.name,
     required this.price,
     this.quantity = 1,
     this.type = CartItemType.product,
+    required this.category, // ✅ Requerido
     this.consoleName,
     this.minutes,
     this.extraControllers,
+    this.modifiers = const [],
+    this.comboComponents, // Opcional
   });
 
   // Método helper para convertir a Map (útil para BD)
@@ -31,10 +42,18 @@ class CartItem {
       'price': price,
       'quantity': quantity,
       'type': type.name,
+      'category': category, // ✅ Añadido
       'consoleName': consoleName,
       'minutes': minutes,
       'extraControllers': extraControllers,
+      'modifiers': modifiers.join(', '), 
     };
+  }
+
+  // Helper para comparar si dos items son idénticos (incluyendo modificadores)
+  bool isSameAs(String otherName, CartItemType otherType, List<String> otherModifiers) {
+    if (name != otherName || type != otherType) return false;
+    return listEquals(modifiers, otherModifiers);
   }
 }
 
@@ -57,15 +76,28 @@ class CartProvider extends ChangeNotifier {
   }
 
   // ========================================
-  // AGREGAR PRODUCTO (CAFETERÍA)
+  // AGREGAR PRODUCTO O ITEM GENÉRICO
   // ========================================
-  void addItem(String name, double price) {
-    final index = _items.indexWhere((item) => item.name == name && item.type == CartItemType.product);
+  void addItem(String name, double price, {
+    required String category, // ✅ Obligatorio
+    List<String> modifiers = const [], 
+    CartItemType type = CartItemType.product,
+    List<Map<String, dynamic>>? comboComponents, // ✅ NUEVO
+  }) {
+    // Revisamos si ya existe un item EXACTAMENTE IGUAL (mismo nombre y modificadores)
+    final index = _items.indexWhere((item) => item.isSameAs(name, type, modifiers));
 
-    if (index >= 0) {
+    if (index >= 0 && comboComponents == null) {
       _items[index].quantity += 1;
     } else {
-      _items.add(CartItem(name: name, price: price, type: CartItemType.product));
+      _items.add(CartItem(
+        name: name, 
+        price: price, 
+        category: category, // ✅ Guardar categoría
+        type: type,
+        modifiers: List.from(modifiers), // Copia de la lista
+        comboComponents: comboComponents, // ✅ Guardar componentes
+      ));
     }
     notifyListeners();
   }
@@ -85,6 +117,7 @@ class CartProvider extends ChangeNotifier {
     _items.add(CartItem(
       name: "Renta $consoleName ($minutes min)",
       price: price,
+      category: 'Rentas', // ✅ Categoría fija para rentas
       type: CartItemType.rental,
       consoleName: consoleName,
       minutes: minutes,
@@ -93,8 +126,8 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void decrementItem(String name, [CartItemType type = CartItemType.product]) {
-    final index = _items.indexWhere((item) => item.name == name && item.type == type);
+  void decrementItem(String name, [CartItemType type = CartItemType.product, List<String> modifiers = const []]) {
+    final index = _items.indexWhere((item) => item.isSameAs(name, type, modifiers));
     if (index >= 0) {
       if (_items[index].quantity > 1) {
         _items[index].quantity -= 1;
@@ -105,8 +138,8 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  void removeItemCompletely(String name, [CartItemType type = CartItemType.product]) {
-    _items.removeWhere((item) => item.name == name && item.type == type);
+  void removeItemCompletely(String name, [CartItemType type = CartItemType.product, List<String> modifiers = const []]) {
+    _items.removeWhere((item) => item.isSameAs(name, type, modifiers));
     notifyListeners();
   }
 

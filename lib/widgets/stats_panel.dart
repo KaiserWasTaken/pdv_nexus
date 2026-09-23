@@ -14,93 +14,145 @@ class StatsPanel extends StatelessWidget {
 
     return StreamBuilder<Map<String, dynamic>>(
       stream: db.orderDao.watchTodayStats(),
-      builder: (context, snapshot) {
-        // Estado de carga
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFFFFDE00)),
-          );
-        }
+      builder: (context, salesSnapshot) {
+        return StreamBuilder<double>(
+          stream: db.expenseDao.watchActiveExpensesTotal(),
+          builder: (context, expensesSnapshot) {
+            // Estado de carga
+            if (salesSnapshot.connectionState == ConnectionState.waiting || 
+                expensesSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: Color(0xFFFFDE00)),
+              );
+            }
 
-        // Manejo de errores
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
-            ),
-          );
-        }
+            // Manejo de errores
+            if (salesSnapshot.hasError || expensesSnapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error: ${salesSnapshot.error ?? expensesSnapshot.error}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              );
+            }
 
-        // Extraer datos
-        final stats = snapshot.data ?? {};
-        final totalSales = stats['totalSales'] as double? ?? 0.0;
-        final totalItems = stats['totalItems'] as int? ?? 0;
+            // Extraer datos
+            final stats = salesSnapshot.data ?? {};
+            final totalSales = stats['totalSales'] as double? ?? 0.0;
+            final cashSales = stats['cashSales'] as double? ?? 0.0;
+            final cardSales = stats['cardSales'] as double? ?? 0.0;
+            final totalExpenses = expensesSnapshot.data ?? 0.0;
+            final netProfit = totalSales - totalExpenses;
 
-        return Container(
-          padding: const EdgeInsets.all(12), // Reducido de 16 a 12
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                nexusBlue.withOpacity(0.8),
-                nexusBlue.withOpacity(0.4),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: nexusYellow, width: 2),
-          ),
-          child: Column(
-            children: [
-              // TÍTULO
-              Row(
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    nexusBlue.withOpacity(0.8),
+                    nexusBlue.withOpacity(0.4),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: nexusYellow, width: 2),
+              ),
+              child: Column(
                 children: [
-                  const Icon(Icons.analytics, color: nexusYellow, size: 24),
-                  const SizedBox(width: 10),
-                  const Text(
-                    "ESTADÍSTICAS DEL DÍA",
-                    style: TextStyle(
-                      color: nexusYellow,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                    ),
+                  // TÍTULO
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.analytics, color: nexusYellow, size: 24),
+                          const SizedBox(width: 10),
+                          const Text(
+                            "RESUMEN DEL DÍA",
+                            style: TextStyle(
+                              color: nexusYellow,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Desglose rápido Efectivo/Tarjeta
+                      Row(
+                        children: [
+                          _MiniStat(label: "EFE", value: cashSales, color: Colors.greenAccent),
+                          const SizedBox(width: 10),
+                          _MiniStat(label: "TAR", value: cardSales, color: Colors.lightBlueAccent),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // GRID DE STATS
+                  Row(
+                    children: [
+                      // VENTAS
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.trending_up,
+                          label: "Total Ventas",
+                          value: "\$${totalSales.toStringAsFixed(0)}",
+                          color: Colors.blueAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // GASTOS
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.trending_down,
+                          label: "Total Gastos",
+                          value: "\$${totalExpenses.toStringAsFixed(0)}",
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // TOTAL GANADO (BALANCE)
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.account_balance_wallet,
+                          label: "Ganancia Neta",
+                          value: "\$${netProfit.toStringAsFixed(0)}",
+                          color: netProfit >= 0 ? Colors.greenAccent : Colors.red,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12), // Reducido de 20 a 12
-
-              // GRID DE STATS (SÓLO PRINCIPALES)
-              Row(
-                children: [
-                  // TOTAL VENDIDO
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.attach_money,
-                      label: "Total Vendido",
-                      value: "\$${totalSales.toStringAsFixed(2)}",
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // ITEMS VENDIDOS
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.shopping_cart,
-                      label: "Items Vendidos",
-                      value: "$totalItems",
-                      color: nexusYellow,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color color;
+
+  const _MiniStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text("$label: ", style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+        Text("\$${value.toStringAsFixed(0)}", style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900)),
+      ],
     );
   }
 }

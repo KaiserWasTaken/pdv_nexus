@@ -8,6 +8,8 @@ mixin _$ProductDaoMixin on DatabaseAccessor<AppDatabase> {
   $PackageItemsTable get packageItems => attachedDatabase.packageItems;
   $ProductModifiersTable get productModifiers =>
       attachedDatabase.productModifiers;
+  $ComboEligibleDrinksTable get comboEligibleDrinks =>
+      attachedDatabase.comboEligibleDrinks;
   ProductDaoManager get managers => ProductDaoManager(this);
 }
 
@@ -22,5 +24,10 @@ class ProductDaoManager {
       $$ProductModifiersTableTableManager(
         _db.attachedDatabase,
         _db.productModifiers,
+      );
+  $$ComboEligibleDrinksTableTableManager get comboEligibleDrinks =>
+      $$ComboEligibleDrinksTableTableManager(
+        _db.attachedDatabase,
+        _db.comboEligibleDrinks,
       );
 }

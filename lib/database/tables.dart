@@ -28,18 +28,23 @@ class Products extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-// --- 2. ITEMS DE PAQUETE (Para combos) ---
+// --- 2. ITEMS DE PAQUETE (Constructor de Combos Dinámico) ---
 class PackageItems extends Table {
   IntColumn get id => integer().autoIncrement()();
 
-  // ID del producto paquete
+  // ID del combo (el producto padre)
   IntColumn get packageId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
 
-  // ID del producto individual incluido
-  IntColumn get productId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
+  // ID del producto fijo (opcional si es un espacio libre)
+  IntColumn get productId => integer().nullable().references(Products, #id, onDelete: KeyAction.cascade)();
 
-  // Cantidad de este producto en el paquete
+  // Cantidad incluida
   IntColumn get quantity => integer().withDefault(const Constant(1))();
+
+  // ✅ NUEVO: Lógica de espacios libres
+  BoolColumn get isPlaceholder => boolean().withDefault(const Constant(false))();
+  TextColumn get placeholderCategory => text().nullable()(); // "Bebidas", "Rentas", etc.
+  TextColumn get placeholderName => text().nullable()(); // "Bebida Libre", "Hora de Juego"
 }
 
 // --- 3. TOPPINGS/MODIFICADORES ---
@@ -71,6 +76,7 @@ class OrderItems extends Table {
   IntColumn get quantity => integer().withDefault(const Constant(1))();
   TextColumn get category => text().nullable()(); // ✅ NUEVO: Para reportes
   IntColumn get reportId => integer().nullable().references(DailyReports, #id)(); // ✅ NUEVO: Cierre de día
+  TextColumn get orderGroupId => text().nullable()(); // ✅ NUEVO: Para agrupar tickets en monitor
 
   // Modificadores aplicados (JSON string: ["Extra Tapioca", "Sin Azúcar"])
   TextColumn get modifiers => text().nullable()();
@@ -80,6 +86,9 @@ class OrderItems extends Table {
 
   // Fecha exacta para saber qué se vendió hoy
   DateTimeColumn get orderDate => dateTime().withDefault(currentDateAndTime)();
+
+  // Método de pago: 'Efectivo' o 'Tarjeta'
+  TextColumn get paymentMethod => text().withDefault(const Constant('Efectivo'))();
 }
 
 // --- 6. REPORTES DIARIOS (Historial) ---
@@ -89,4 +98,21 @@ class DailyReports extends Table {
   RealColumn get totalCash => real()();
   TextColumn get pdfPath => text()();
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+}
+
+class Expenses extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get description => text()();
+  RealColumn get amount => real()();
+  TextColumn get category => text()();
+  TextColumn get paymentMethod => text()();
+  DateTimeColumn get date => dateTime().withDefault(currentDateAndTime)();
+  IntColumn get reportId => integer().nullable().references(DailyReports, #id)();
+}
+
+// --- 8. BEBIDAS ELEGIBLES PARA COMBOS ---
+class ComboEligibleDrinks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get comboId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
+  IntColumn get drinkId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
 }

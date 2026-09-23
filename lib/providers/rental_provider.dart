@@ -51,7 +51,7 @@ class RentalProvider extends ChangeNotifier {
       if (rental.expectedEndTime != null) {
         // Verificar si el tiempo ya terminó
         if (now.isAfter(rental.expectedEndTime!) && !(_notifiedRentals[rental.id] ?? false)) {
-          _currentAlert = "⚠️ ¡TIEMPO TERMINADO! - ${rental.consoleName}";
+          _currentAlert = " ¡TIEMPO TERMINADO! - ${rental.consoleName}";
           _notifiedRentals[rental.id] = true;
           changed = true;
           _triggerAlertEffects(); // ✅ Sonido + Vibración
@@ -79,7 +79,7 @@ class RentalProvider extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 100));
     SystemSound.play(SystemSoundType.click);
     
-    debugPrint("ALERTA: Tiempo terminado - Vibración intensa activada");
+    debugPrint("ALERTA: Tiempo terminado ");
   }
 
   // ========================================
@@ -92,24 +92,51 @@ class RentalProvider extends ChangeNotifier {
   }
 
   // ========================================
-  // CÁLCULO DE COSTOS (POR ADELANTADO)
+  // CÁLCULO DE COSTOS (ACTUALIZADO v10.1)
   // ========================================
-  double calculateCostForTime(int minutes, int extraControllers) {
+  double calculateCostForTime(int minutes, int extraControllers, {bool isExtension = false}) {
     if (minutes <= 0) return 0.0;
 
-    // Bloques de 30 minutos (15 pesos por bloque)
-    final blocks = (minutes / 30).ceil();
-    final timeCost = blocks * 15.0;
+    double cost = 0;
 
-    // Controles adicionales (10 pesos por control)
-    final controllerCost = extraControllers * 10.0;
+    if (isExtension) {
+      // SI ES EXTENSIÓN: $20 por cada bloque de 30 min o fracción
+      int blocks = (minutes / 30).ceil();
+      cost = blocks * 20.0;
+    } else {
+      // SI ES COBRO INICIAL:
+      int fullHours = minutes ~/ 60;
+      int remainingMinutes = minutes % 60;
 
-    return timeCost + controllerCost;
+      // Cada hora completa sale en $35
+      cost = fullHours * 35.0;
+
+      if (remainingMinutes > 0) {
+        if (fullHours == 0) {
+          // Menos de una hora inicial
+          if (remainingMinutes <= 30) {
+            cost = 25.0; // 30 min o menos inicial
+          } else {
+            cost = 35.0; // De 31 a 60 min inicial
+          }
+        } else {
+          // Fracción después de una hora completa: $20 por cada bloque de 30 min
+          int extraBlocks = (remainingMinutes / 30).ceil();
+          cost += extraBlocks * 20.0;
+        }
+      }
+    }
+
+    // Controles adicionales ($15 c/u)
+    cost += extraControllers * 15.0;
+
+    return cost;
   }
 
   double calculateCost(DateTime start, DateTime end, int extraControllers) {
     final duration = end.difference(start);
-    return calculateCostForTime(duration.inMinutes, extraControllers);
+    // Para el cobro final al liberar la consola, usamos la lógica base
+    return calculateCostForTime(duration.inMinutes, extraControllers, isExtension: false);
   }
 
   // ... rest of the class
